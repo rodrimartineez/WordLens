@@ -2,6 +2,9 @@
 
   .venv\\Scripts\\python.exe tools\\diagnose.py
   .venv\\Scripts\\python.exe tools\\diagnose.py --skip-llm
+
+Usa la configuración de desarrollo (.devdata). La aplicación instalada tiene su
+propia comprobación: WordLens.exe --self-test (ver README > Build).
 """
 
 from __future__ import annotations
@@ -52,7 +55,7 @@ def check_ocr(settings):
 
     langs = available_languages()
     print(f"{OK} Idiomas OCR instalados: {langs}")
-    ocr = WindowsOcr(settings.ocr_language)
+    ocr = WindowsOcr(settings.ocr_tag)
     img = Image.new("RGB", (1920, 300), (40, 70, 110))
     d = ImageDraw.Draw(img)
     font = ImageFont.truetype("arial.ttf", 48)

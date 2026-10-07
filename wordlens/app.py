@@ -10,6 +10,7 @@ la cola (acotada) descarta los más antiguos en lugar de crecer sin límite.
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import queue
 import threading
@@ -18,13 +19,16 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from wordlens.ai import ollama_setup
 from wordlens.ai.ollama_client import (
     OllamaAborted,
     OllamaClient,
     OllamaError,
     OllamaUnavailableError,
 )
+from wordlens.ai.ollama_setup import OllamaState
 from wordlens.ai.vocabulary_analyzer import VocabularyAnalyzer
+from wordlens.config.paths import BACKUP_DIR, PENDING_DIR
 from wordlens.config.settings import Settings
 from wordlens.document.word_writer import DocumentError, DocumentLockedError, WordWriter
 from wordlens.state import AppState, StateMachine
@@ -34,6 +38,14 @@ from wordlens.vocabulary.models import SubtitleLine, VocabularyItem
 log = logging.getLogger(__name__)
 
 Notifier = Callable[[str, str], None]  # (título, mensaje)
+
+
+@dataclass(frozen=True)
+class AppError:
+    """Último error relevante para el usuario (la interfaz lo muestra con su acción)."""
+
+    kind: str  # "document" | "ollama_missing" | "ollama_down" | "model_missing" | "capture"
+    message: str
 
 
 @dataclass
@@ -64,6 +76,9 @@ class WordLensApp:
         self._queue: queue.Queue[SubtitleLine] = queue.Queue(maxsize=settings.max_queue_lines)
         self._last_notice: dict[str, float] = {}
         self._stats_listeners: list[Callable[[SessionStats], None]] = []
+        self._error_listeners: list[Callable[[AppError | None], None]] = []
+        self.last_error: AppError | None = None
+        self._last_relaunch = 0.0
 
     # ------------------------------------------------------------ utilidades
     def set_notifier(self, notifier: Notifier) -> None:
@@ -71,6 +86,26 @@ class WordLensApp:
 
     def on_stats(self, listener: Callable[[SessionStats], None]) -> None:
         self._stats_listeners.append(listener)
+
+    def on_error(self, listener: Callable[[AppError | None], None]) -> None:
+        self._error_listeners.append(listener)
+
+    def _set_error(self, kind: str | None, message: str = "") -> None:
+        self.last_error = AppError(kind, message) if kind else None
+        for listener in list(self._error_listeners):
+            try:
+                listener(self.last_error)
+            except Exception:
+                log.exception("Error en listener de errores")
+
+    def clear_error(self) -> None:
+        if self.last_error is not None:
+            self._set_error(None)
+
+    def _fail(self, kind: str, message: str) -> bool:
+        self._set_error(kind, message)
+        self.notify(message)
+        return False
 
     def _emit_stats(self) -> None:
         for listener in list(self._stats_listeners):
@@ -103,36 +138,38 @@ class WordLensApp:
             for t in self._threads:
                 t.join(timeout=5)
             if any(t.is_alive() for t in self._threads):
-                self.notify("La sesión anterior aún se está cerrando; inténtalo en unos segundos.")
+                self.notify("The previous session is still closing; try again in a few seconds.")
                 return False
             self._threads = []
 
             s = self.settings
-            writer = WordWriter(s.document, backup_count=s.backup_count)
+            writer = WordWriter(
+                s.document, backup_count=s.backup_count, backup_dir=BACKUP_DIR, lang=s.source_code
+            )
             try:
                 created = writer.ensure_exists()
                 if not created:
                     writer.backup()
                 existing = writer.read_expressions()
             except DocumentLockedError:
-                self.notify(f"No se puede abrir {s.document.name}: está bloqueado por otro programa.")
-                return False
+                return self._fail(
+                    "document",
+                    f"Can't open {s.document.name}: it is locked by another program (close it in Word).",
+                )
             except (DocumentError, OSError) as exc:
-                self.notify(f"Error con el documento: {exc}")
-                return False
+                return self._fail("document", f"Problem with the vocabulary document: {exc}")
             self.writer = writer
-            self.dedup.reset(existing)
+            self.dedup.reset(existing, lang=s.source_code)
+            self._recover_pending(writer)
 
-            try:
-                if not self.client.has_model(s.ollama_model):
-                    self.notify(
-                        f"El modelo {s.ollama_model} no está descargado. "
-                        f"Ejecuta: ollama pull {s.ollama_model}"
-                    )
-                    return False
-            except OllamaError as exc:
-                self.notify(f"Ollama no responde. Ábrelo y vuelve a intentarlo. ({exc})")
-                return False
+            status = ollama_setup.check(self.client, s.ollama_model)
+            if not status.ok:
+                kind = {
+                    OllamaState.NOT_INSTALLED: "ollama_missing",
+                    OllamaState.NOT_RUNNING: "ollama_down",
+                    OllamaState.MODEL_MISSING: "model_missing",
+                }[status.state]
+                return self._fail(kind, status.message)
 
             self._stop_event = threading.Event()
             self._queue = queue.Queue(maxsize=s.max_queue_lines)
@@ -144,11 +181,10 @@ class WordLensApp:
                 threading.Thread(target=self._capture_loop, args=(stop, q), name="capture", daemon=True),
                 threading.Thread(target=self._analyzer_loop, args=(stop, q), name="analyzer", daemon=True),
             ]
+            self._set_error(None)
             for t in self._threads:
                 t.start()
-            self.notify(
-                f"Capturando. {len(existing)} expresiones ya registradas en {s.document.name}."
-            )
+            self.notify(f"Capturing. {len(existing)} expressions already in {s.document.name}.")
             self._emit_stats()
             return True
 
@@ -163,7 +199,7 @@ class WordLensApp:
         for t in self._threads:
             t.join(timeout=5)
         self._flush_pending()
-        self.notify(f"Detenido. {self.stats.added} expresiones nuevas en esta sesión.")
+        self.notify(f"Stopped. {self.stats.added} new expressions this session.")
         self._emit_stats()
         return True
 
@@ -183,19 +219,45 @@ class WordLensApp:
                 self._dump_pending(writer)
             else:
                 self.notify(
-                    f"Hay {writer.pending_count} expresiones pendientes: cierra el documento en Word.",
+                    f"{writer.pending_count} expressions are waiting: close the document in Word.",
                     key="locked",
                     every=60,
                 )
 
     def _dump_pending(self, writer: WordWriter) -> None:
-        """Último recurso al salir con Word bloqueando el documento: no perder nada."""
-        target = writer.path.with_suffix(".pendientes.txt")
-        items = list(writer._pending)  # noqa: SLF001 - acceso interno intencionado
+        """Último recurso al salir con Word bloqueando el documento: no perder nada.
+
+        Se guardan en la carpeta de datos de WordLens (no junto al documento) y se
+        recuperan automáticamente en la siguiente sesión con ese documento.
+        """
+        items = writer.take_pending()
+        if not items:
+            return
+        target = pending_file_for(writer.path)
+        target.parent.mkdir(parents=True, exist_ok=True)
         with target.open("a", encoding="utf-8") as fh:
             for it in items:
                 fh.write(f"{it.expression} — {it.translation}\n")
         log.warning("%d entradas pendientes guardadas en %s", len(items), target)
+
+    def _recover_pending(self, writer: WordWriter) -> None:
+        """Vuelve a encolar lo que quedó pendiente al salir la última vez."""
+        source = pending_file_for(writer.path)
+        if not source.exists():
+            return
+        items = []
+        for line in source.read_text(encoding="utf-8").splitlines():
+            expr, sep, trans = line.partition(" — ")
+            if sep and expr.strip() and trans.strip():
+                items.append(VocabularyItem(expr.strip(), trans.strip(), ""))
+        try:
+            written = writer.add_entries(items)
+        except DocumentError:
+            log.warning("No se pudieron recuperar todavía las entradas pendientes de %s", source)
+            return
+        source.unlink(missing_ok=True)
+        self._record_written(written)
+        log.info("Recuperadas %d entradas pendientes de %s", len(written), source)
 
     # ---------------------------------------------------------- hilo captura
     def _capture_loop(self, stop: threading.Event, q: queue.Queue[SubtitleLine]) -> None:
@@ -212,13 +274,13 @@ class WordLensApp:
         s = self.settings
         enable_dpi_awareness()
         try:
-            ocr = WindowsOcr(s.ocr_language)
+            ocr = WindowsOcr(s.ocr_tag)
             capturer = ScreenCapturer(
                 s.monitor, s.top_band_fraction, s.bottom_band_fraction, s.scan_top, s.scan_bottom
             )
         except (OcrUnavailableError, Exception) as exc:  # noqa: BLE001
             log.exception("No se pudo iniciar la captura")
-            self.notify(f"No se pudo iniciar la captura/OCR: {exc}")
+            self._fail("capture", f"Could not start screen capture/OCR: {exc}")
             threading.Thread(target=self.stop, daemon=True).start()
             return
 
@@ -248,6 +310,7 @@ class WordLensApp:
                                 min_words=s.min_words_per_line,
                                 min_english_ratio=s.min_english_ratio,
                                 require_centered=s.require_centered,
+                                language=s.source_code,
                             )
                         visible.extend(last_seen[name])
                         del image, shot  # nada de imágenes acumuladas en memoria
@@ -259,7 +322,7 @@ class WordLensApp:
                     errors += 1
                     log.exception("Error en captura/OCR (%d seguidos)", errors)
                     if errors >= 20:
-                        self.notify("Demasiados errores de captura/OCR; sesión detenida.")
+                        self._fail("capture", "Too many screen capture/OCR errors; session stopped.")
                         threading.Thread(target=self.stop, daemon=True).start()
                         return
                 elapsed = time.perf_counter() - t0
@@ -330,16 +393,31 @@ class WordLensApp:
             except OllamaAborted:
                 break
             except OllamaUnavailableError as exc:
-                self.notify(f"Ollama no responde: {exc}", key="ollama", every=120)
-                stop.wait(5)
+                log.warning("Ollama no responde: %s", exc)
+                self.notify("Ollama is not responding. Trying to reconnect…", key="ollama", every=120)
+                self._try_relaunch_ollama(stop)
             except OllamaError as exc:
                 log.error("Error del LLM: %s", exc)
-                self.notify(f"Error del modelo: {exc}", key="llm", every=120)
+                self.notify(f"AI model error: {exc}", key="llm", every=120)
             except Exception:
                 log.exception("Error inesperado analizando %s", batch)
             finally:
                 self.state.transition(AppState.CAPTURING, only_from={AppState.PROCESSING})
                 self._emit_stats()
+
+    def _try_relaunch_ollama(self, stop: threading.Event) -> None:
+        """Ollama se ha cerrado durante la sesión: intenta arrancarlo (como mucho cada minuto)."""
+        if time.monotonic() - self._last_relaunch > 60 and ollama_setup.launch_ollama():
+            self._last_relaunch = time.monotonic()
+            deadline = time.monotonic() + 30
+            while not stop.is_set() and time.monotonic() < deadline:
+                try:
+                    self.client.version()
+                    log.info("Ollama vuelve a responder")
+                    return
+                except OllamaError:
+                    stop.wait(1)
+        stop.wait(5)
 
     def _write(self, items: list[VocabularyItem]) -> None:
         if self.writer is None:
@@ -348,13 +426,13 @@ class WordLensApp:
             written = self.writer.add_entries(items)
         except DocumentLockedError:
             self.notify(
-                "No puedo guardar: cierra el documento en Word (las expresiones quedan en espera).",
+                "Can't save: close the document in Word (new expressions are kept until then).",
                 key="locked",
                 every=60,
             )
             return
         except DocumentError as exc:
-            self.notify(f"Error escribiendo el documento: {exc}", key="docerr", every=60)
+            self.notify(f"Error writing the document: {exc}", key="docerr", every=60)
             return
         self._record_written(written)
 
@@ -370,3 +448,9 @@ class WordLensApp:
     @property
     def document_path(self) -> Path:
         return self.settings.document
+
+
+def pending_file_for(document: Path) -> Path:
+    """Archivo de pendientes de un documento, dentro de la carpeta de datos."""
+    digest = hashlib.sha1(str(document.resolve()).lower().encode("utf-8")).hexdigest()[:8]
+    return PENDING_DIR / f"{document.stem}_{digest}.pending.txt"

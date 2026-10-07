@@ -28,10 +28,10 @@ class VocabularyAnalyzer:
         s = self.settings
         lines = [ln.strip() for ln in lines if ln and ln.strip()]
         if s.prefilter_trivial_lines:
-            skipped = [ln for ln in lines if is_trivial_line(ln)]
+            skipped = [ln for ln in lines if is_trivial_line(ln, s.source_code)]
             if skipped:
                 log.info("Líneas triviales omitidas: %s", skipped)
-            lines = [ln for ln in lines if not is_trivial_line(ln)]
+            lines = [ln for ln in lines if not is_trivial_line(ln, s.source_code)]
         if not lines:
             return []
 
@@ -62,6 +62,8 @@ class VocabularyAnalyzer:
                 max_single_word_zipf=s.max_single_word_zipf,
                 max_words=s.max_expression_words,
                 grounding_text=" ".join(lines),
+                source=s.source_code,
+                target=s.target_code,
             )
             if item is not None:
                 items.append(item)

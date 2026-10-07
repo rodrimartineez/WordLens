@@ -1,0 +1,20 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Datos de desarrollo (la app instalada usa %LOCALAPPDATA%\WordLens)
+.devdata/
+logs/
+config.json
+*.json.tmp
+
+# Documentos y archivos de usuario
+*.docx
+~wordlens_*
+.wordlens_backups/
+*.pendientes.txt
+
+# Build
+build/
+dist/

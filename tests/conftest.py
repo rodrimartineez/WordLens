@@ -1,7 +1,13 @@
+import os
 import sys
+import tempfile
 from pathlib import Path
 
 import pytest
+
+# Los tests nunca tocan los datos reales (ni %LOCALAPPDATA%\WordLens ni .devdata):
+# se fija una carpeta de datos temporal antes de importar wordlens.
+os.environ.setdefault("WORDLENS_DATA_DIR", tempfile.mkdtemp(prefix="wordlens-tests-"))
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 

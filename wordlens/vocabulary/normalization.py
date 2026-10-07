@@ -14,27 +14,16 @@ from functools import lru_cache
 
 from wordfreq import zipf_frequency
 
+from .languages import EN_ARTICLES, EN_FUNCTION_WORDS, EN_PARTICLES, EN_SUBJECT_STARTERS, profile
+
 _APOSTROPHES = str.maketrans({"’": "'", "‘": "'", "`": "'", "´": "'", "“": '"', "”": '"'})
 
-PARTICLES = frozenset(
-    "up out off on in down over away back through around about at into onto along "
-    "across after apart by for forward with without together under behind ahead".split()
-)
+PARTICLES = EN_PARTICLES
 OBJECT_PRONOUNS = frozenset("it him her them me us you someone somebody something sb sth".split())
 POSSESSIVES = frozenset("my your his her our their one's someone's somebody's".split())
-ARTICLES = frozenset({"a", "an", "the"})
-SUBJECT_STARTERS = frozenset(
-    "i you he she we they it where what who how why when is are do does did can could will would".split()
-)
-# Palabras funcionales: no cuentan como "contenido" de una expresión.
-FUNCTION_WORDS = frozenset(
-    """a an the and or but so if of to in on at by for with from as than then
-    i you he she it we they me him her us them my your his its our their one's
-    this that these those there here some any something anything nothing everything
-    someone anyone somebody anybody be am is are was were been being do does did
-    have has had will would can could shall should may might must not no yes
-    very really just too also all""".split()
-)
+ARTICLES = EN_ARTICLES
+SUBJECT_STARTERS = EN_SUBJECT_STARTERS
+FUNCTION_WORDS = EN_FUNCTION_WORDS
 
 IRREGULAR = {
     "got": "get", "gotten": "get", "gets": "get", "getting": "get",
@@ -72,23 +61,25 @@ def fold(text: str) -> str:
 def normalize_text(text: str) -> str:
     """Forma comparable de un subtítulo: minúsculas, sin puntuación, espacios simples."""
     text = fold(text).lower()
-    text = re.sub(r"[^a-z0-9' ]+", " ", text)
+    text = re.sub(r"[^\w' ]+|_", " ", text)
     text = text.replace(" '", " ").replace("' ", " ")
     return re.sub(r"\s+", " ", text).strip()
 
 
 def tokenize(text: str) -> list[str]:
-    return re.findall(r"[a-z]+(?:'[a-z]+)?", fold(text).lower())
+    return re.findall(r"[^\W\d_]+(?:'[^\W\d_]+)?", fold(text).lower())
 
 
 @lru_cache(maxsize=20000)
-def lemma(word: str) -> str:
-    """Lematizador ligero de verbos (sin dependencias pesadas).
+def lemma(word: str, lang: str = "en") -> str:
+    """Lematizador ligero de verbos ingleses (sin dependencias pesadas).
 
     Genera candidatos quitando -ing/-ed/-s y elige el más frecuente en inglés
-    según wordfreq, que hace aquí de diccionario.
+    según wordfreq, que hace aquí de diccionario. En otros idiomas no se toca.
     """
     w = word.lower()
+    if lang != "en":
+        return w
     if w in IRREGULAR:
         return IRREGULAR[w]
     candidates: list[str] = []
@@ -118,16 +109,19 @@ def lemma(word: str) -> str:
     return best
 
 
-def clean_expression(text: str) -> str:
+def clean_expression(text: str, lang: str = "en") -> str:
     text = fold(text).lower().strip()
     text = re.sub(r"\(.*?\)", " ", text)  # "(something)" explicativos
     text = text.strip(" \t\"'.,;:!?¡¿-—–…")
-    text = re.sub(r"^to\s+", "", text)  # "to figure out" -> "figure out"
-    text = re.sub(r"[^a-z' \-]+", " ", text)
+    if lang == "en":
+        text = re.sub(r"^to\s+", "", text)  # "to figure out" -> "figure out"
+        text = re.sub(r"[^a-z' \-]+", " ", text)
+    else:
+        text = re.sub(r"[^\w' \-]+|[\d_]+", " ", text)
     return re.sub(r"\s+", " ", text).strip()
 
 
-def canonical_expression(text: str) -> str:
+def canonical_expression(text: str, lang: str = "en") -> str:
     """Forma de diccionario de una expresión multi-palabra.
 
     - "getting at"           -> "get at"
@@ -135,9 +129,10 @@ def canonical_expression(text: str) -> str:
     - "take it for granted"  -> "take for granted"
     - "under my skin"        -> "under one's skin"
     Las palabras sueltas no se tocan ("overwhelmed" sigue siendo "overwhelmed").
+    En español el modelo ya devuelve el infinitivo; sólo se limpia el texto.
     """
-    tokens = clean_expression(text).split()
-    if len(tokens) < 2:
+    tokens = clean_expression(text, lang).split()
+    if lang != "en" or len(tokens) < 2:
         return " ".join(tokens)
 
     out: list[str] = []
@@ -169,7 +164,7 @@ _PERSONAL_OBJECTS = frozenset({"him", "her", "them", "me", "us"})
 _PLACEHOLDERS = OBJECT_PRONOUNS | {"one's", "oneself", "yourself", "himself", "herself"}
 
 
-def dedup_key(expression: str) -> str:
+def dedup_key(expression: str, lang: str = "en") -> str:
     """Clave para detectar duplicados en el documento.
 
     Ignora mayúsculas, puntuación, artículo inicial, "to" inicial y los huecos de
@@ -177,10 +172,12 @@ def dedup_key(expression: str) -> str:
     "take for granted"). No usa similitud difusa: "get at" y "get out" son
     expresiones distintas y deben seguir siéndolo.
     """
-    canon = canonical_expression(expression)
+    canon = canonical_expression(expression, lang)
     tokens = [t for t in canon.replace("-", " ").split() if t]
-    if len(tokens) > 1 and tokens[0] in ARTICLES:
+    if len(tokens) > 1 and tokens[0] in profile(lang).articles:
         tokens = tokens[1:]
+    if lang != "en":
+        return " ".join(tokens)
     tokens = ["one's" if t in POSSESSIVES else t for t in tokens]
     loose = [t for i, t in enumerate(tokens) if i == 0 or t not in _PLACEHOLDERS]
     return " ".join(loose if len(loose) >= 2 or len(tokens) < 2 else tokens)

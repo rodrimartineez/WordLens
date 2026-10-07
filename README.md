@@ -1,420 +1,327 @@
 # WordLens
 
-Herramienta de escritorio para Windows que **lee los subtítulos en inglés que aparecen en pantalla**, detecta vocabulario y expresiones útiles de nivel **B2-C1** (phrasal verbs, idioms, collocations, palabras avanzadas) y los **añade automáticamente a un único documento Word** con su traducción al español:
+**WordLens reads the subtitles on your screen while you watch a series or film, picks out the vocabulary worth learning, and adds it — translated — to a Word document.**
 
 > **figure out** — averiguar / descubrir
 > **take for granted** — dar por sentado
 > **overwhelmed** — abrumado / sobrepasado
 
-Todo se ejecuta **en local**: captura, OCR, modelo de IA (Ollama) y documento. Ni las capturas ni las frases salen de tu equipo.
+It is a normal Windows desktop app: install it, open it from the Start menu, press **Start**, and keep watching. Everything runs on your computer: screen capture, OCR, the AI model (via Ollama) and the document. Nothing is sent to the internet.
+
+![WordLens main window](docs/screenshot.png)
 
 ---
 
-## Índice
+## Features
 
-1. [Cómo funciona](#1-cómo-funciona)
-2. [Instalación](#2-instalación)
-3. [Uso](#3-uso)
-4. [Configuración](#4-configuración)
-5. [El documento Word](#5-el-documento-word)
-6. [Probar sin una serie](#6-probar-sin-una-serie)
-7. [Solución de problemas](#7-solución-de-problemas)
-8. [Decisiones técnicas y rendimiento](#8-decisiones-técnicas-y-rendimiento)
-9. [Arquitectura](#9-arquitectura)
-10. [Limitaciones conocidas](#10-limitaciones-conocidas)
-
----
-
-## 1. Cómo funciona
-
-```text
-Ctrl+Shift+V ─▶ cada 0,5 s: captura el tercio superior (33 %) y el inferior (33 %) de la pantalla
-                 │   (sólo en memoria, nunca se guardan en disco)
-                 ▼
-             Preprocesado: aísla texto blanco/amarillo (los colores de subtítulo)
-                 ▼
-             OCR nativo de Windows  (~15-35 ms por franja)
-                 ▼
-             Filtro: ¿parece un subtítulo? (centrado, ≥2 palabras, en inglés, no un reloj o menú)
-                 ▼
-             ¿Es nuevo? (visto en 2 capturas seguidas + no procesado en los últimos 3 min)
-                 ▼  sólo si hay texto nuevo
-             LLM local (Ollama) con la frase completa como contexto → JSON
-                 ▼
-             Validación determinista (descarta palabras básicas, cognados, frases enteras,
-             expresiones inventadas que no están en el subtítulo, JSON roto...)
-                 ▼
-             ¿Ya está en el documento? (comparación normalizada)
-                 ▼  sólo las nuevas
-             Se añaden al final del .docx  (escritura atómica + copias de seguridad)
-Ctrl+Shift+X ─▶ se detiene
-```
-
-Estados (visibles en el icono junto al reloj y en su tooltip, p. ej. "WordLens — Capturando (12 nuevas)"):
-
-| Icono      | Estado         | Significado                                                    |
-| ---------- | -------------- | -------------------------------------------------------------- |
-| ⚪ gris    | **Inactivo**   | Esperando a que pulses el atajo de inicio                      |
-| 🟢 verde   | **Capturando** | Leyendo subtítulos                                             |
-| 🟠 naranja | **Procesando** | El modelo analiza frases nuevas (la captura sigue en paralelo) |
-| 🔴 rojo    | **Detenido**   | Sesión terminada; puedes iniciar otra                          |
+- **Real-time subtitle capture** — reads the top and bottom thirds of the screen every 0.5 s (in memory only, never saved to disk).
+- **OCR** — the native Windows OCR engine (~15–35 ms per band), tuned for white/yellow subtitles.
+- **Local AI vocabulary extraction** — a local LLM (Ollama) finds phrasal verbs, idioms, collocations and advanced words at B2–C1 level, using the full sentence as context.
+- **Translation** — each expression gets a short translation for its meaning *in that context*.
+- **Two language directions** — English subtitles → Spanish translations, or Spanish subtitles → English translations.
+- **Automatic deduplication** — `figure out`, `Figure out`, `to figure out` and `figure it out` are the same entry; `get at` and `get out` are not.
+- **Word vocabulary document** — one permanent `.docx` you choose; new entries are appended at the end with **bold expression** — translation.
+- **Safe writing** — atomic saves, rotating backups, and nothing is lost if the document is open in Word.
+- **Global hotkeys** — `Ctrl + Shift + V` to start, `Ctrl + Shift + X` to stop, from any app (configurable).
+- **System tray** — keeps working in the background; open, start, stop, change document, settings and exit from the tray icon.
 
 ---
 
-## 2. Instalación
+## Requirements
 
-### Requisitos
+| What | Why | Notes |
+| --- | --- | --- |
+| **Windows 10 (2004+) or 11, 64-bit** | Native OCR, hotkeys, tray | |
+| **[Ollama](https://ollama.com/download/windows)** | Runs the AI model locally | Installed separately, once |
+| **AI model** `maternion/ling-3.0-tiny:8b` | Vocabulary analysis | ~5.3 GB, downloaded once from inside WordLens (it asks first) |
+| Windows OCR language pack for your subtitle language | Reading subtitles | English is usually already installed; see *Troubleshooting* for Spanish |
+| 16 GB RAM recommended | The model uses ~5.5 GB | An NVIDIA GPU makes it faster but is not required |
 
-| Componente                                   | Para qué                          | ¿Instalación manual?                   |
-| -------------------------------------------- | --------------------------------- | -------------------------------------- |
-| Windows 10/11                                | API de OCR y atajos nativos       | —                                      |
-| **Python 3.10+**                             | Ejecutar la aplicación            | **Sí**                                 |
-| **Ollama**                                   | Ejecutar el modelo de IA en local | **Sí**                                 |
-| Modelo `maternion/ling-3.0-tiny:8b` (5,3 GB) | Analizar vocabulario              | Automática (install.ps1)               |
-| Paquete OCR de inglés de Windows             | Leer texto en inglés              | Normalmente ya viene; si no, ver abajo |
-| Paquetes de Python                           | Ver `requirements.txt`            | Automática (install.ps1)               |
+**Microsoft Word is not required.** WordLens writes the `.docx` file itself. You only need something to *read* it: Word, LibreOffice, WPS, or Google Docs.
 
-Hardware: 16 GB de RAM recomendados (el modelo ocupa ~5,5 GB). Una GPU NVIDIA acelera el modelo, pero no es imprescindible.
+Python is **not** required to use the installed app.
 
-### Paso 1 — Python
+---
 
-1. Descarga Python desde <https://www.python.org/downloads/windows/> (o en una terminal: `winget install Python.Python.3.13`).
-2. En el instalador, **marca "Add python.exe to PATH"**.
-3. Comprueba en una terminal nueva:
+## Installation
 
-```bash
-python --version
-```
+1. Install **Ollama** from <https://ollama.com/download/windows> (or `winget install Ollama.Ollama`).
+2. Run **`WordLens-Setup-1.0.0.exe`**.
+   - By default it installs for your user only (no administrator rights): `%LOCALAPPDATA%\Programs\WordLens`. You can choose *install for all users* (`C:\Program Files\WordLens`) in the first dialog.
+   - Optionally tick *Create a desktop shortcut*.
+3. Press the **Windows key**, type **WordLens**, and open it.
 
-### Paso 2 — Ollama
+**Uninstall:** *Settings → Apps → Installed apps → WordLens → Uninstall* (or from the Start menu entry). The uninstaller asks whether to also delete WordLens settings and logs. **Your vocabulary document is never deleted.**
 
-1. Descarga e instala desde <https://ollama.com/download/windows> (o `winget install Ollama.Ollama`).
-2. Ollama se queda ejecutándose en segundo plano (icono de la llama junto al reloj).
-3. Comprueba:
+---
 
-```bash
-ollama --version
-```
+## First setup
 
-### Paso 3 — WordLens
+The first time you open WordLens it asks for:
 
-Abre PowerShell en la carpeta del proyecto y ejecuta:
+1. **Vocabulary document** — a *folder* and a *file name* (suggested: `Documents\WordLens\Vocabulary.docx`, or `%USERPROFILE%\WordLens\Vocabulary.docx` if Windows *Controlled folder access* protects Documents). WordLens checks it can actually write there before accepting it. You can also pick an existing `.docx`: its content is kept and its entries are used to avoid duplicates.
+2. **Subtitle language** — English or Spanish.
+3. **Translation language** — Spanish or English (always the other one).
 
-```bash
-powershell -ExecutionPolicy Bypass -File install.ps1
-```
+Press **Continue**. That's it — next time WordLens opens straight to the main window with everything remembered.
 
-El instalador:
+You can change the languages and the document at any time from the main window (while capture is stopped).
 
-- crea un entorno virtual en `.venv` e instala los paquetes;
-- comprueba que el OCR de inglés de Windows está disponible;
-- descarga el modelo si falta (`ollama pull maternion/ling-3.0-tiny:8b`, ~5,3 GB, sólo la primera vez);
-- ejecuta un diagnóstico completo (OCR, captura, Word, atajos, modelo).
+---
 
-Al final debe aparecer **"Todo correcto."**
+## Usage
 
-<details>
-<summary>Instalación manual (sin el script)</summary>
+1. Open **WordLens** from the Start menu.
+2. Press **Start** (or `Ctrl + Shift + V` from anywhere).
+3. Play your video **with subtitles**, ideally full screen.
+4. Minimise or close the window — WordLens keeps working from the **system tray** (the icon may be under the `^` arrow next to the clock).
+5. New expressions are appended to your document as they appear.
+6. Press **Stop** (or `Ctrl + Shift + X`).
+
+| Status | Meaning |
+| --- | --- |
+| ● **Ready** | Waiting for you to press Start |
+| ● **Capturing** | Reading subtitles (green dot on the tray icon) |
+| ● **Processing** | The AI is analysing new lines; capture continues in parallel |
+| ● **Stopped** | Session finished; press Start for a new one |
+| ● **Error** | Something needs attention — the window explains what and offers the fix (e.g. *Download model…*) |
+
+**Tray menu** (right-click the icon): Open WordLens · Start · Stop · Open vocabulary document · Change vocabulary document… · Settings… · Exit.
+
+Closing or minimising the window **never** stops WordLens; only **Exit** in the tray menu does. Opening WordLens again from the Start menu brings back the existing window.
+
+**Settings** (link at the bottom of the window, or the tray menu): AI model, hotkeys, notifications, plus links to the log, the data folder and the advanced `config.json`.
+
+> **Tip:** you can keep the document open in Word to watch it grow, but Word locks the file. WordLens keeps new entries waiting and writes them as soon as you close Word. If you exit while Word still has it open, they are saved in WordLens' data folder and added automatically next session.
+
+### What happens with Ollama
+
+WordLens does not bundle Ollama or the model (they are several GB and are shared with other apps). Instead:
+
+- **Ollama not installed** → the window shows *Error* with a **Get Ollama** link.
+- **Ollama installed but not running** → WordLens starts it in the background when you press Start.
+- **Ollama closed during a session** → WordLens reconnects and restarts it automatically.
+- **Model not downloaded** → *Error* with **Download model…**. WordLens asks for confirmation (it is ~5.3 GB), then shows the download progress, which you can cancel. Nothing is ever downloaded without asking.
+
+The status of the AI is always visible at the bottom of the window.
+
+---
+
+## Where things are stored
+
+| What | Where |
+| --- | --- |
+| Application (read-only) | `%LOCALAPPDATA%\Programs\WordLens\` (or `C:\Program Files\WordLens\`) |
+| Settings — `config.json` | `%LOCALAPPDATA%\WordLens\` |
+| Logs — `logs\wordlens.log` (rotated, max ~8 MB) | `%LOCALAPPDATA%\WordLens\logs\` |
+| Document backups (last 10, one per session) | `%LOCALAPPDATA%\WordLens\backups\` |
+| Entries waiting while Word locked the document | `%LOCALAPPDATA%\WordLens\pending\` |
+| **Your vocabulary document** | Wherever you chose, e.g. `D:\Inglés\Series B2-C1.docx` |
+
+WordLens never writes in its installation folder and never puts its own files next to your document.
+
+---
+
+## Troubleshooting
+
+| Problem | Solution |
+| --- | --- |
+| **"Ollama is not installed"** | Install it from <https://ollama.com/download/windows>, then press Start again. |
+| **"Ollama is installed but not responding"** | Open *Ollama* from the Start menu and press Start again. |
+| **"Couldn't register the shortcut"** | Another app uses that combination. Change it in *Settings* (e.g. `ctrl+alt+f9`). |
+| `Ctrl+Shift+V` no longer pastes without formatting in other apps | Expected while WordLens is open (the hotkey is global). Change it in *Settings* if you use it often. |
+| **No subtitles detected** | 1) Open the log (*Settings → Open log*): if there are no "Subtítulo nuevo" lines, the problem is capture/OCR. 2) For subtitles that are not white or yellow, set `"ocr_preprocess": "gray"` in the advanced `config.json`. 3) Check the video is on the main monitor (`monitor`). |
+| **Black capture (Netflix, Disney+, Prime…)** | DRM protection. In Chrome/Edge, disable *Settings → System → Use graphics acceleration* and restart the browser. Local players (VLC, MPC-HC) and YouTube work. |
+| **Spanish subtitles not read** | Install the Spanish OCR pack: *Settings → Time & language → Language & region → Add a language → Español (España)*, or in an admin PowerShell: `Add-WindowsCapability -Online -Name "Language.OCR~~~es-ES~0.0.1.0"` (use `en-US` for English). |
+| **"Windows is blocking WordLens from writing in this folder"** | Windows Defender *Controlled folder access* protects Documents, Desktop, Pictures… Choose a folder outside them (e.g. `%USERPROFILE%\WordLens` or `D:\Inglés`), or allow `WordLens.exe` in *Windows Security → Virus & threat protection → Ransomware protection → Allow an app through Controlled folder access*. |
+| **"Can't save: close the document in Word"** | Close the document; waiting entries are written automatically. |
+| **Slow / some lines skipped** | On a 4 GB GPU the model takes ~1 s per line. In very dense dialogue the oldest queued lines may be dropped (logged). Close GPU-heavy apps. |
+
+---
+
+## Development
+
+Requires Python 3.10+ (developed with 3.14) on Windows.
 
 ```bash
 python -m venv .venv
 ```
 
 ```bash
-.venv\Scripts\python.exe -m pip install -r requirements.txt
+.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 ```
 
-```bash
-ollama pull maternion/ling-3.0-tiny:8b
-```
-
-```bash
-.venv\Scripts\python.exe tools\diagnose.py
-```
-
-</details>
-
-### Si falta el OCR de inglés
-
-El diagnóstico lo indica con "Falta el paquete OCR". Soluciones:
-
-- **Configuración → Hora e idioma → Idioma y región → Agregar un idioma → English (United States)** (no hace falta ponerlo como idioma de Windows), o
-- en PowerShell **como administrador**:
-
-```bash
-Add-WindowsCapability -Online -Name "Language.OCR~~~en-US~0.0.1.0"
-```
-
----
-
-## 3. Uso
-
-1. Asegúrate de que Ollama está abierto (icono de la llama).
-2. Ejecuta **`start_wordlens.bat`** (doble clic). Aparece un icono ⚪ junto al reloj (quizá dentro de la flecha `^` de iconos ocultos) y una notificación "Listo".
-3. Pon tu serie o película **con subtítulos en inglés** (mejor a pantalla completa).
-4. Pulsa **Ctrl + Shift + V** → el icono se pone 🟢 y empieza a capturar. La primera vez tras arrancar Ollama, el modelo tarda ~1 min en cargarse; los subtítulos de ese minuto esperan en cola.
-5. Mira la serie con normalidad. Las expresiones nuevas se van añadiendo al documento.
-6. Pulsa **Ctrl + Shift + X** para detener → 🔴 y una notificación con el número de expresiones nuevas.
-7. Para cerrar la aplicación: clic derecho en el icono → **Salir**.
-
-Menú del icono (clic derecho): iniciar/detener, abrir el documento, elegir otro documento, abrir la carpeta, editar la configuración y ver el registro.
-
-> **Consejo:** puedes tener el documento abierto en Word para ir viéndolo, pero Word bloquea el archivo y no deja guardarlo. Las expresiones quedan en espera y se escriben en cuanto cierras Word. Si sales con Word abierto, se guardan en `Vocabulario.pendientes.txt` junto al documento para que no se pierda nada.
-
-Para ver lo que ocurre en tiempo real, ejecuta con consola:
+Run from source (window + tray, log also printed to the console):
 
 ```bash
 .venv\Scripts\python.exe main.py
 ```
 
-Para que arranque con Windows: pulsa `Win + R`, escribe `shell:startup` y crea ahí un acceso directo a `start_wordlens.bat`.
+Other options: `--start` (start capturing immediately), `--hidden` (tray only), `--document PATH`, `--no-gui` (hotkeys only, Ctrl+C to quit), `-v` (debug log), `--self-test`.
 
----
+**Development vs production data.** From source, WordLens stores its settings and logs in `.devdata\` inside the project (git-ignored), so it never touches the installed app's data in `%LOCALAPPDATA%\WordLens`. `WORDLENS_DATA_DIR` overrides the data folder for both. `start_wordlens.bat` launches the source version without a console.
 
-## 4. Configuración
-
-Al primer arranque se crea **`config.json`** en la carpeta del proyecto (menú del icono → _Editar configuración_). Reinicia WordLens tras modificarlo. Opciones principales:
-
-| Clave                                        | Por defecto                     | Descripción                                                                                                                                             |
-| -------------------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `hotkey_start` / `hotkey_stop`               | `ctrl+shift+v` / `ctrl+shift+x` | Atajos globales. Formato `ctrl+alt+shift+win` + tecla (`a`-`z`, `0`-`9`, `f1`-`f24`, `space`...)                                                        |
-| `document_path`                              | `Vocabulario.docx`              | Documento Word de destino. Las rutas relativas se resuelven desde la carpeta del proyecto (`WordLens\Vocabulario.docx`); también admite rutas absolutas |
-| `ollama_model`                               | `maternion/ling-3.0-tiny:8b`    | Modelo de Ollama                                                                                                                                        |
-| `target_level`                               | `B2-C1`                         | Nivel objetivo (se usa en el prompt)                                                                                                                    |
-| `target_language`                            | `Spanish`                       | Idioma de las traducciones                                                                                                                              |
-| `capture_interval_seconds`                   | `0.5`                           | Frecuencia de captura                                                                                                                                   |
-| `top_band_fraction` / `bottom_band_fraction` | `0.33` / `0.33`                 | Altura de las franjas analizadas (fracción de la pantalla; máximo `0.5`). El tercio central no se captura                                               |
-| `scan_top` / `scan_bottom`                   | `true` / `true`                 | Analizar la franja superior / inferior                                                                                                                  |
-| `monitor`                                    | `1`                             | Monitor a capturar (1 = principal)                                                                                                                      |
-| `ocr_preprocess`                             | `subtitle`                      | `subtitle` aísla texto blanco/amarillo; usa `gray` si tus subtítulos son de otro color                                                                  |
-| `stability_frames`                           | `2`                             | Capturas seguidas en las que debe verse un subtítulo antes de procesarlo                                                                                |
-| `repeat_window_seconds`                      | `180`                           | Tiempo durante el que una frase ya procesada no se vuelve a enviar al modelo                                                                            |
-| `batch_max_lines`                            | `4`                             | Frases por llamada al modelo                                                                                                                            |
-| `max_single_word_zipf`                       | `4.5`                           | Umbral de frecuencia: las palabras sueltas más frecuentes se consideran básicas. Bájalo (p. ej. `4.0`) para ser más estricto                            |
-| `require_centered`                           | `true`                          | Ignorar texto que no esté centrado (logos, menús laterales)                                                                                             |
-| `notifications`                              | `true`                          | Notificaciones de Windows                                                                                                                               |
-| `app_name`                                   | `WordLens`                      | Nombre mostrado en el icono y las notificaciones                                                                                                        |
-
-### Cambiar de modelo
-
-```bash
-ollama pull qwen3.5:4b-q4_K_M
-```
-
-y en `config.json`: `"ollama_model": "qwen3.5:4b-q4_K_M"`. Ver la comparativa en la [sección 8](#8-decisiones-técnicas-y-rendimiento).
-
----
-
-## 5. El documento Word
-
-- Es **un único documento permanente**: cada entrada nueva se añade **al final**.
-- **Ubicación por defecto:** dentro de la propia carpeta del proyecto:
-
-  ```text
-  Proyectos/
-  └── WordLens/
-      ├── Vocabulario.docx          ← el documento
-      ├── Vocabulario.pendientes.txt ← sólo si sales con Word bloqueándolo
-      └── .wordlens_backups/        ← copias de seguridad
-  ```
-
-  En `config.json` se guarda como ruta relativa (`"Vocabulario.docx"`), así que todo sigue funcionando aunque muevas o renombres la carpeta del proyecto. Los `.docx`, copias y pendientes están excluidos de git.
-
-- Formato de cada línea: **expresión en negrita** — traducción en texto normal.
-- **Elegir el documento:** menú del icono → _Elegir documento Word…_. Puedes seleccionar uno existente (se conserva todo su contenido) o escribir un nombre nuevo (se creará). Si lo eliges dentro de la carpeta del proyecto se guarda como ruta relativa. También puedes indicarlo en `config.json` o con `start_wordlens.bat --document "D:\Inglés\vocab.docx"`.
-- **Documento existente:** al iniciar cada sesión se leen todas sus entradas para no repetirlas. Se reconocen líneas `expresión — traducción` (también con `–` o `-`) y, si no hay separador, el texto en negrita. Puedes editarlo, reordenarlo o borrar líneas a mano cuando quieras: el documento se vuelve a leer antes de cada escritura.
-- **Seguridad:**
-  - nunca se sobrescribe un documento existente; si el archivo no es un .docx válido, no se toca;
-  - al iniciar cada sesión se guarda una copia en `.wordlens_backups\` (junto al documento; se conservan las 10 últimas);
-  - cada guardado se escribe primero en un archivo temporal y se sustituye de forma atómica: un corte de luz no deja el documento a medias.
-
-### Duplicados
-
-Antes de añadir nada se normaliza la expresión y se compara con lo que ya hay en el documento. Se consideran **la misma entrada**:
-
-- `figure out` = `Figure out` = `FIGURE OUT` = `to figure out` = `figure it out`
-- `take for granted` = `take it for granted` = `take something for granted`
-- `get under one's skin` = `get under my skin`; `get at` = `getting at`; `a long shot` = `long shot`
-
-Y **no** se fusionan expresiones distintas: `get at` ≠ `get out`, `make out` ≠ `make up`, `put up` ≠ `put up with`, `make it` ≠ `make`. A propósito no se usa similitud aproximada, porque fusionaría phrasal verbs con significados diferentes.
-
----
-
-## 6. Probar sin una serie
-
-**Analizar frases de ejemplo** (usa el modelo real; `--dry-run` no escribe en Word):
-
-```bash
-.venv\Scripts\python.exe tools\try_text.py --dry-run "I couldn't figure out what he was getting at."
-```
-
-Salida real obtenida:
-
-```text
-> I couldn't figure out what he was getting at.
-   figure out — averiguar / descubrir   [nuevo]
-   get at — insinuar / querer decir   [nuevo]
-```
-
-Sin `--dry-run` escribe en el documento configurado (o en el de `--document`). Con `--file frases.txt` analiza un archivo con una frase por línea.
-
-**Simular subtítulos en pantalla** (prueba la cadena completa: captura → OCR → LLM → Word). Inicia WordLens, pulsa Ctrl+Shift+V y ejecuta:
-
-```bash
-.venv\Scripts\python.exe tools\subtitle_simulator.py
-```
-
-Abre una ventana a pantalla completa con un fondo en movimiento y va mostrando subtítulos arriba y abajo (Esc para salir). La ventana debe quedarse en primer plano: no cambies a otra aplicación mientras dura.
-
-**Diagnóstico completo:**
-
-```bash
-.venv\Scripts\python.exe tools\diagnose.py
-```
-
-**Tests** (154 en total; los marcados `llm` usan Ollama y tardan ~30 s):
-
-```bash
-.venv\Scripts\python.exe -m pytest
-```
+**Tests** (the `llm` ones use the real model through Ollama):
 
 ```bash
 .venv\Scripts\python.exe -m pytest -m "not llm"
 ```
 
-Cubren OCR real sobre imágenes de subtítulos (fondos con ruido y degradado, texto amarillo, dos líneas, franja superior, relojes y texto lateral), captura real, detección de cambios, estabilidad e historial de subtítulos, filtro de idioma, normalización y duplicados, parseo de JSON inválido, validación de vocabulario, cognados, escritura de Word (formato, documentos existentes, archivos corruptos, bloqueo por Word, copias), máquina de estados (incluida concurrencia), atajos globales disparados con pulsaciones reales del sistema, y el modelo real con los ejemplos de esta especificación.
+```bash
+.venv\Scripts\python.exe -m pytest
+```
+
+They cover real OCR on synthetic subtitle images (noise, gradients, yellow text, two lines, clocks, side text, Spanish), real screen capture, subtitle stability and history, language filtering, normalisation and deduplication for both languages, broken LLM JSON, vocabulary validation, cognates, the Word writer (existing documents, corrupt files, Word locks, backups, pending recovery), the state machine, global hotkeys fired with real key presses, Ollama status detection, settings and data-folder isolation, and the real model.
+
+**Developer tools:**
+
+```bash
+.venv\Scripts\python.exe tools\try_text.py --dry-run "I couldn't figure out what he was getting at."
+```
+
+```bash
+.venv\Scripts\python.exe tools\subtitle_simulator.py
+```
+
+```bash
+.venv\Scripts\python.exe tools\diagnose.py
+```
+
+`try_text.py` analyses sentences with the real model; `subtitle_simulator.py` shows full-screen fake subtitles (with `--file`, one per line, `top:` prefix for the top band) to test the whole chain; `diagnose.py` checks every component.
+
+`WORDLENS_CAPTURE_VISIBLE=1` lets screenshot tools see WordLens' own windows (normally they are hidden from screen capture so WordLens doesn't read its own interface as a subtitle).
 
 ---
 
-## 7. Solución de problemas
+## Build
 
-| Problema                                                                             | Solución                                                                                                                                                                                                                                                                                                                                                       |
-| ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **"Ollama no responde"**                                                             | Abre Ollama desde el menú Inicio. Comprueba con `ollama list`.                                                                                                                                                                                                                                                                                                 |
-| **"El modelo ... no está descargado"**                                               | `ollama pull maternion/ling-3.0-tiny:8b`                                                                                                                                                                                                                                                                                                                       |
-| **"No se pudo registrar el atajo"**                                                  | Otra aplicación usa esa combinación. Cámbiala en `config.json` (p. ej. `ctrl+alt+f9`) y reinicia.                                                                                                                                                                                                                                                              |
-| **Ctrl+Shift+V deja de "pegar sin formato" en otras apps**                           | Es normal mientras WordLens está abierto (el atajo es global). Si lo usas a menudo, cambia `hotkey_start`.                                                                                                                                                                                                                                                     |
-| **"WordLens ya se está ejecutando"**                                                 | Ya hay una instancia: busca el icono junto al reloj (también en la flecha `^`).                                                                                                                                                                                                                                                                                |
-| **No detecta subtítulos**                                                            | 1) Mira el registro (menú → _Ver registro_): si no aparecen líneas "Subtítulo nuevo", el problema es la captura/OCR. 2) Si tus subtítulos no son blancos ni amarillos, pon `"ocr_preprocess": "gray"`. 3) Si están en otra posición, aumenta `top_band_fraction`/`bottom_band_fraction`. 4) Comprueba que el vídeo está en el monitor configurado (`monitor`). |
-| **La captura sale en negro (Netflix, Disney+, Prime en el navegador o en sus apps)** | Es la protección DRM: Windows no deja capturar ese vídeo. En Chrome/Edge suele resolverse desactivando **Configuración → Sistema → Usar aceleración por hardware** y reiniciando el navegador. Los reproductores locales (VLC, MPC-HC...) y YouTube funcionan sin cambios.                                                                                     |
-| **Detecta texto que no es un subtítulo**                                             | Lo normal es que los filtros lo descarten (posición, idioma, letras/dígitos) y el modelo no extraiga nada. Si molesta, desactiva la franja que no uses (`scan_top: false`).                                                                                                                                                                                    |
-| **"No puedo guardar: cierra el documento en Word"**                                  | Word bloquea el archivo mientras está abierto. Ciérralo; las expresiones en espera se escriben solas.                                                                                                                                                                                                                                                          |
-| **Va lento / la cola se llena**                                                      | El modelo tarda ~1-2 s por frase sin vocabulario y ~4 s por expresión encontrada en una GPU de 4 GB. Cierra programas que usen la GPU (juegos, editores 3D) para que quepa más del modelo en VRAM. En escenas con mucho diálogo se pueden descartar algunas frases antiguas (queda registrado en el log).                                                      |
-| **Entradas poco útiles**                                                             | Baja `max_single_word_zipf` (p. ej. `4.2`) o prueba otro modelo (sección 8).                                                                                                                                                                                                                                                                                   |
-| **Error al instalar paquetes**                                                       | Actualiza pip: `.venv\Scripts\python.exe -m pip install --upgrade pip` y repite.                                                                                                                                                                                                                                                                               |
-| **"la ejecución de scripts está deshabilitada"**                                     | Usa exactamente `powershell -ExecutionPolicy Bypass -File install.ps1`.                                                                                                                                                                                                                                                                                        |
+One command builds everything from scratch — virtual environment, tests, icon, executable, a self-test of the packaged executable, and the installer:
 
-Registro detallado: `logs\wordlens.log` (subtítulos detectados, respuestas del modelo, entradas descartadas y añadidas). Se guarda sólo en local y rota automáticamente (máximo ~8 MB).
+```bash
+powershell -ExecutionPolicy Bypass -File build.ps1
+```
 
----
+Requires [Inno Setup 6](https://jrsoftware.org/isinfo.php) for the installer step (`winget install JRSoftware.InnoSetup`). Options: `-SkipTests`, `-SkipInstaller`.
 
-## 8. Decisiones técnicas y rendimiento
+| Output | Location |
+| --- | --- |
+| Application folder (runnable as is) | `dist\WordLens\WordLens.exe` |
+| Installer (~30 MB) | `dist\installer\WordLens-Setup-<version>.exe` |
 
-Mediciones en el equipo de desarrollo: i7-11800H, 16 GB de RAM, RTX 3050 Ti Laptop (4 GB), Windows 11, Ollama 0.40, Python 3.14.
+Steps it runs (each can be run by hand):
 
-### Modelo de IA: `maternion/ling-3.0-tiny` (se mantiene)
+```bash
+.venv\Scripts\python.exe tools\make_icon.py
+```
 
-- **Existe y funciona con Ollama**: `ollama pull maternion/ling-3.0-tiny:8b`, 5,3 GB (Q4_K_M), contexto de 128K.
-- **Arquitectura**: Mixture-of-Experts de 7,9B parámetros totales y **sólo 1,3B activos por token**, con modo de razonamiento opcional (se desactiva: aquí sólo añade latencia).
-- **Requisitos**: ~5,5 GB entre RAM y VRAM. En una GPU de 4 GB, el 42 % va en GPU y el resto en CPU.
-- **Rendimiento medido**: ~6 tokens/s de generación. Gracias a la caché de prefijo de Ollama (el prompt fijo de ~560 tokens se reutiliza), una frase sin vocabulario tarda ~1-2 s y cada expresión encontrada ~4 s. Primera carga: ~40-80 s (se hace al iniciar la sesión).
-- **Calidad para la tarea** (con el prompt few-shot y los filtros de WordLens): detecta bien phrasal verbs, idioms y palabras avanzadas (figure out, get at, take for granted, make out, call it a day, get under one's skin, put up with, overwhelmed, flimsy, long shot), lematiza correctamente y su español es natural en la mayoría de casos. **Puntos débiles**: tiende a proponer palabras básicas o cognados ("supermarket") y alguna frase entera, cosa que WordLens filtra de forma determinista. A veces da traducciones imprecisas o con alguna palabra no española (p. ej. "flimsy — fraco / débil", donde "fraco" es portugués). Esto último no se puede filtrar con fiabilidad.
+```bash
+.venv\Scripts\python.exe -m PyInstaller packaging\wordlens.spec --noconfirm --distpath dist --workpath build
+```
 
-**Alternativas evaluadas** con el mismo prompt y las mismas frases:
+```bash
+dist\WordLens\WordLens.exe --self-test
+```
 
-| Modelo                                   | Tamaño     | Velocidad aquí                        | Calidad observada                                                                         |
-| ---------------------------------------- | ---------- | ------------------------------------- | ----------------------------------------------------------------------------------------- |
-| **ling-3.0-tiny 8B (MoE, 1,3B activos)** | 5,3 GB     | **~6,2 tok/s**                        | Buena detección; algún falso positivo (filtrado por WordLens)                             |
-| qwen3.5:4b (denso)                       | 3,3 GB     | ~4,8 tok/s                            | Algo más preciso (sin falsos positivos en frases básicas); español similar; **más lento** |
-| mistral 7B                               | 4,4 GB     | 13-29 s por frase (vs 6-19 s de ling) | Traducciones peores ("estar bajo mi piel", "corriendo de tiempo")                         |
-| gemma4:e2b / e4b                         | 4,3-6,6 GB | no probado                            | Por tamaño tampoco caben en 4 GB de VRAM                                                  |
+```bash
+"%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" /DAppVersion=1.0.0 packaging\installer.iss
+```
 
-**Conclusión**: ninguna alternativa local es _claramente_ mejor en este hardware. qwen3.5:4b es una opción razonable si prefieres algo más de precisión a cambio de velocidad (ver arriba cómo cambiarlo). Con una GPU de 8 GB o más, ling-3.0-tiny cabría entero y sería varias veces más rápido.
+The version comes from `wordlens/__init__.py`. Silent install for automation: `WordLens-Setup-1.0.0.exe /VERYSILENT /CURRENTUSER`; silent uninstall: `"%LOCALAPPDATA%\Programs\WordLens\unins000.exe" /VERYSILENT`.
 
-### OCR: Windows.Media.Ocr
+### Packaging choices
 
-| Opción                  | Precisión en subtítulos                      | Velocidad                                     | Instalación                                                       | Veredicto                         |
-| ----------------------- | -------------------------------------------- | --------------------------------------------- | ----------------------------------------------------------------- | --------------------------------- |
-| **Windows OCR (WinRT)** | Muy buena con texto grande y limpio          | **15-35 ms/franja** con preprocesado (medido) | Ya incluido en Windows                                            | **Elegido**                       |
-| Tesseract               | Buena con texto binarizado, peor sobre vídeo | más lento (estimado, no medido)               | Instalador externo + PATH                                         | Más fricción                      |
-| EasyOCR / PaddleOCR     | Muy buena                                    | Lento en CPU; rápido con CUDA (estimado)      | PyTorch/Paddle (varios GB), soporte irregular en Python recientes | Excesivo para texto de subtítulos |
-
-Clave de rendimiento: el **preprocesado de subtítulos** (aislar píxeles blanco/amarillo brillantes y binarizar) elimina el fondo del vídeo. En las pruebas pasó de 170 ms con errores ("VI couldn't...") a **16 ms con texto exacto**, incluso sobre ruido y degradados.
-
-### Captura: mss
-
-GDI BitBlt vía ctypes, ~5-20 ms por franja, sin binarios. Sólo se capturan los tercios superior e inferior (≈66 % de la pantalla; el tercio central, donde casi nunca hay subtítulos, se omite). Se amplió desde 25 %/30 % para detectar subtítulos situados algo más hacia el centro. Las imágenes viven en memoria y se descartan tras el OCR. Además, si la franja preprocesada no cambia (vídeo en pausa, subtítulo fijo), se reutiliza el resultado anterior sin repetir el OCR.
-
-**Frecuencia: 0,5 s.** Un subtítulo dura normalmente entre 1 y 7 segundos. Con 0,5 s y estabilidad de 2 capturas, cualquier subtítulo de ≥1 s se detecta, con un consumo de CPU bajo (~2 OCR/s por franja de unos 20-35 ms).
-
-### Word: python-docx
-
-Librería estándar y estable para .docx, sin necesidad de tener Word instalado. Se añade escritura atómica, copias rotativas y relectura antes de cada guardado.
-
-### Atajos: RegisterHotKey (Win32)
-
-API nativa vía ctypes: no requiere administrador, no instala hooks de teclado (no "ve" el resto de teclas que pulsas) y Windows avisa si la combinación ya está ocupada.
-
-### Recursos en sesiones largas
-
-- Captura y OCR nunca esperan al modelo (hilos separados).
-- La cola hacia el LLM está acotada (40 frases). Si el modelo va por detrás, se descartan las más antiguas.
-- El historial de subtítulos está acotado (ventana de 3 min y 500 entradas como máximo).
-- Las imágenes no se acumulan ni se guardan en disco.
-- Al detener, la petición en curso al modelo se cancela al instante.
-- El modelo se mantiene cargado en Ollama 30 min tras el último uso (`ollama_keep_alive`).
+- **PyInstaller, folder mode** (not one-file): starts instantly (one-file unpacks everything to `%TEMP%` on every launch) and triggers far fewer antivirus false positives. Only the English/Spanish word-frequency lists are bundled (all languages would add ~55 MB).
+- **Inno Setup** classic installer: Start-menu entry with icon and AppUserModelID (so Windows search, the taskbar and notifications all show *WordLens*), uninstaller in *Installed apps*, per-user install without admin rights by default, and it closes a running WordLens before updating.
+- **Not MSIX**: it needs code signing, and its sandbox gets in the way of what WordLens does (screen capture, global hotkeys, writing documents anywhere). Not targeting the Microsoft Store.
+- **Ollama stays external** (see above): bundling it plus a 5 GB model would make a huge installer and duplicate what Ollama already manages well.
 
 ---
 
-## 9. Arquitectura
+## How it works
+
+```text
+Start ─▶ every 0.5 s: capture top 33 % and bottom 33 % of the screen (memory only)
+            ▼
+         Preprocess: isolate white/yellow text (subtitle colours)
+            ▼
+         Windows OCR (en-US / es-ES)          ~15–35 ms per band
+            ▼
+         Looks like a subtitle?  centred, ≥2 words, in the subtitle language, not a clock/menu
+            ▼
+         New?  seen in 2 consecutive frames, not processed in the last 3 min
+            ▼  only new text
+         Local LLM (Ollama), whole sentence as context → JSON
+            ▼
+         Deterministic validation: drops basic words, cognates, whole sentences,
+         invented expressions not in the subtitle, broken JSON…
+            ▼
+         Already in the document?  (normalised comparison)
+            ▼  only new ones
+         Appended to the .docx  (atomic write + backups)
+```
+
+WordLens' own windows are excluded from screen capture (`WDA_EXCLUDEFROMCAPTURE`), so its interface is never mistaken for a subtitle.
+
+### Technical decisions
+
+Measured on the development machine: i7-11800H, 16 GB RAM, RTX 3050 Ti Laptop (4 GB), Windows 11, Ollama 0.40.
+
+**AI model — `maternion/ling-3.0-tiny:8b`.** Mixture-of-Experts, 7.9 B total / 1.3 B active parameters per token, 5.3 GB (Q4_K_M). On a 4 GB GPU, ~42 % runs on the GPU and the rest on CPU. Thanks to Ollama's prefix cache (the fixed ~560-token prompt is reused) a line takes **~1 s** including any expressions found; the first load takes ~40–80 s and is done when the session starts. Good at phrasal verbs, idioms and advanced words and at lemmatising; weak points are proposing basic words or cognates (filtered deterministically) and occasional imprecise translations. Compared with the same prompt: `qwen3.5:4b` was slightly more precise but slower; `mistral 7B` translated worse ("estar bajo mi piel"). Any Ollama model can be selected in *Settings*.
+
+**Ollama connection.** The client connects to `127.0.0.1` rather than `localhost`: on Windows, `localhost` tries IPv6 first and every request paid a ~2 s timeout before falling back. This alone cut start-up from ~5 s to instant and every LLM call by ~2 s.
+
+**OCR — Windows.Media.Ocr.** Built into Windows, no binaries or models to install, 15–35 ms per band with preprocessing, very accurate on large clean text. Tesseract needs an external install and does worse on video; EasyOCR/PaddleOCR need multi-GB frameworks and are slow on CPU. Isolating bright white/yellow pixels removes the video background: in tests OCR went from 170 ms with errors to 16 ms with exact text.
+
+**Capture — mss.** GDI BitBlt via ctypes, ~5–20 ms per band. Only the top and bottom thirds are captured; unchanged bands (paused video) skip OCR entirely.
+
+**Word — python-docx.** No Word installation needed. Atomic writes, rotating backups, re-reading before each write (so manual edits are respected).
+
+**Hotkeys — RegisterHotKey (Win32).** No admin rights, no keyboard hook (it does not see your other key presses), and Windows reports conflicts.
+
+**Interface — tkinter + pystray.** Both already part of the stack (no new heavy dependency such as Qt, ~100 MB). Tk runs on the main thread; the tray runs its own message loop; everything else talks to the window through a thread-safe queue.
+
+**Long sessions.** Capture/OCR never wait for the model (separate threads); the queue to the model is bounded (40 lines, oldest dropped); subtitle history is bounded (3 min, 500 entries); images are never kept or saved; stopping cancels the in-flight model request immediately.
+
+### Architecture
 
 ```text
 WordLens/
-├── main.py                      # Entrada: logging, instancia única, atajos, bandeja
-├── start_wordlens.bat          # Lanzador sin consola
-├── install.ps1                  # Instalador + diagnóstico
+├── main.py                       # Entry point: logging, single instance, hotkeys, window + tray
+├── build.ps1                     # Builds everything: tests → exe → self-test → installer
+├── packaging/
+│   ├── wordlens.spec             # PyInstaller
+│   └── installer.iss             # Inno Setup
+├── assets/                       # wordlens.ico / wordlens.png (generated by tools/make_icon.py)
 ├── wordlens/
-│   ├── app.py                   # Controlador: sesiones, hilos capture/analyzer, cola
-│   ├── state.py                 # Máquina de estados INACTIVE/CAPTURING/PROCESSING/STOPPED
-│   ├── capture/
-│   │   ├── screen_capture.py    # Franjas, preprocesado de subtítulos, detector de cambios
-│   │   └── subtitle_detector.py # Filtro de líneas, agrupación, estabilidad e historial
-│   ├── ocr/ocr_engine.py        # Windows.Media.Ocr
+│   ├── app.py                    # Controller: sessions, capture/analyzer threads, queue, errors
+│   ├── state.py                  # State machine INACTIVE/CAPTURING/PROCESSING/STOPPED
+│   ├── selftest.py               # --self-test for the packaged app
+│   ├── capture/                  # Screen bands, subtitle preprocessing, change detection, subtitle filter
+│   ├── ocr/ocr_engine.py         # Windows.Media.Ocr
 │   ├── ai/
-│   │   ├── ollama_client.py     # API REST de Ollama (cancelable)
-│   │   ├── prompts.py           # Prompt de sistema, ejemplos few-shot, esquema JSON
+│   │   ├── ollama_client.py      # Ollama REST API (cancellable, model pull)
+│   │   ├── ollama_setup.py       # Find / start Ollama, check the model
+│   │   ├── prompts.py            # System prompts and few-shot examples (EN→ES, ES→EN)
 │   │   └── vocabulary_analyzer.py
-│   ├── vocabulary/
-│   │   ├── normalization.py     # Lematización ligera, forma canónica, clave de duplicados
-│   │   ├── extractor.py         # Parseo/validación del JSON y filtros anti falsos positivos
-│   │   ├── deduplicator.py
-│   │   └── models.py
-│   ├── document/word_writer.py  # Lectura/escritura segura del .docx
-│   ├── input/hotkeys.py         # RegisterHotKey
-│   ├── ui/tray.py               # Icono de bandeja, menú, notificaciones
-│   └── config/settings.py       # config.json
-├── tools/
-│   ├── try_text.py              # Analizar frases de ejemplo
-│   ├── subtitle_simulator.py    # Subtítulos simulados en pantalla
-│   └── diagnose.py              # Comprobación de todas las piezas
-└── tests/                       # pytest
+│   ├── vocabulary/               # Normalisation, languages, validation, deduplication
+│   ├── document/word_writer.py   # Safe .docx reading/writing
+│   ├── input/hotkeys.py          # RegisterHotKey
+│   ├── ui/
+│   │   ├── window.py             # Main window, first setup, settings
+│   │   ├── tray.py               # Tray icon and menu
+│   │   └── icon.py               # Icon drawing
+│   └── config/
+│       ├── paths.py              # App files vs user data (production / development)
+│       └── settings.py           # config.json
+├── tools/                        # try_text, subtitle_simulator, diagnose, make_icon
+└── tests/                        # pytest
 ```
 
----
+### Known limitations
 
-## 10. Limitaciones conocidas
-
-- **Vídeo con DRM**: puede capturarse en negro (ver _Solución de problemas_).
-- **Calidad de las traducciones**: depende del modelo. ling-3.0-tiny acierta en la mayoría de casos, pero alguna traducción puede ser imprecisa. Revisa el documento de vez en cuando; puedes corregir o borrar líneas a mano.
-- **Velocidad del modelo en GPUs pequeñas**: en escenas con diálogo muy rápido, algunas frases pueden descartarse si la cola se llena.
-- **Subtítulos de colores poco habituales**: usa `"ocr_preprocess": "gray"`.
-- **Sólo Windows** (OCR y atajos nativos).
-
----
-
-## Actualizar desde VocabLens
-
-El proyecto se llamaba antes **VocabLens**. Al arrancar, WordLens actualiza automáticamente un `config.json` antiguo: cambia el nombre de la aplicación, mueve la ruta del documento a la carpeta del proyecto (si apuntaba a `Documentos\VocabLens\` o a la antigua carpeta del proyecto) y amplía las franjas de captura antiguas (25 %/30 %) a los nuevos tercios. Los valores que hayas personalizado se respetan. El lanzador ahora es `start_wordlens.bat`.
-#   W o r d L e n s 
- 
- 
+- **DRM video** may be captured black (see *Troubleshooting*).
+- **Translation quality** depends on the model; it is right most of the time, but review the document now and then — you can edit or delete lines by hand.
+- **Conservative filter**: some genuine expressions made of very common words (e.g. *menos mal*) are skipped to avoid filling the document with basic vocabulary.
+- **Small GPUs**: in very fast dialogue, some lines may be dropped if the queue fills up.
+- **Unusual subtitle colours**: use `"ocr_preprocess": "gray"`.
+- **Windows only** (native OCR, hotkeys and capture exclusion).

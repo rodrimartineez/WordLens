@@ -1,4 +1,4 @@
-"""Configuración local de la aplicación (config.json en la raíz del proyecto)."""
+"""Configuración del usuario (config.json en la carpeta de datos, ver paths.py)."""
 
 from __future__ import annotations
 
@@ -8,31 +8,23 @@ import os
 from dataclasses import asdict, dataclass, fields
 from pathlib import Path
 
+from .paths import CONFIG_PATH, IS_FROZEN, PROJECT_ROOT, default_document, documents_dir
+
 log = logging.getLogger(__name__)
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_CONFIG_PATH = PROJECT_ROOT / "config.json"
-LOG_DIR = PROJECT_ROOT / "logs"
+DEFAULT_CONFIG_PATH = CONFIG_PATH
+
+# Idiomas soportados de punta a punta (OCR, filtros, prompts): nombre -> código.
+LANGUAGES = {"English": "en", "Spanish": "es"}
+OCR_TAGS = {"en": "en-US", "es": "es-ES"}
 
 
-# El documento vive dentro de la carpeta del proyecto. Se guarda como ruta
-# relativa en config.json para que siga funcionando si la carpeta se mueve.
-DEFAULT_DOCUMENT = "Vocabulario.docx"
-
-
-def resolve_project_path(value: str) -> Path:
-    """Rutas relativas -> relativas a la carpeta del proyecto; absolutas, tal cual."""
+def resolve_document_path(value: str) -> Path:
+    """Ruta del documento. Las relativas se interpretan dentro de "Documentos"."""
+    if not value:
+        return default_document()
     path = Path(os.path.expandvars(os.path.expanduser(value)))
-    return path if path.is_absolute() else PROJECT_ROOT / path
-
-
-def to_project_relative(path: Path | str) -> str:
-    """Devuelve la ruta relativa al proyecto si está dentro de él; si no, absoluta."""
-    path = Path(path)
-    try:
-        return str(path.resolve().relative_to(PROJECT_ROOT))
-    except ValueError:
-        return str(path)
+    return path if path.is_absolute() else documents_dir() / path
 
 
 @dataclass
@@ -42,12 +34,14 @@ class Settings:
     target_level: str = "B2-C1"
     source_language: str = "English"
     target_language: str = "Spanish"
+    # False hasta completar la configuración inicial (documento + idiomas).
+    setup_complete: bool = False
 
     # Atajos globales
     hotkey_start: str = "ctrl+shift+v"
     hotkey_stop: str = "ctrl+shift+x"
 
-    # Documento Word de destino
+    # Documento Word de destino (ruta absoluta elegida por el usuario)
     document_path: str = ""
     backup_count: int = 10
 
@@ -60,12 +54,14 @@ class Settings:
     scan_bottom: bool = True
 
     # OCR / detección de subtítulos
-    ocr_language: str = "en-US"
+    # "auto": según source_language (en-US / es-ES). Se puede forzar una etiqueta.
+    ocr_language: str = "auto"
     # "subtitle": aísla texto blanco/amarillo (más rápido y preciso);
     # "gray": imagen completa en grises (para subtítulos de otros colores).
     ocr_preprocess: str = "subtitle"
     require_centered: bool = True
     min_words_per_line: int = 2
+    # Proporción mínima de palabras del idioma de origen (nombre histórico).
     min_english_ratio: float = 0.7
     stability_frames: int = 2
     repeat_window_seconds: float = 180.0
@@ -90,18 +86,39 @@ class Settings:
     notifications: bool = True
 
     def __post_init__(self) -> None:
-        if not self.document_path:
-            self.document_path = DEFAULT_DOCUMENT
+        if self.source_language not in LANGUAGES:
+            self.source_language = "English"
+        if self.target_language not in LANGUAGES:
+            self.target_language = "Spanish"
+        if self.source_language == self.target_language:
+            self.target_language = "Spanish" if self.source_language == "English" else "English"
 
     @property
     def document(self) -> Path:
-        return resolve_project_path(self.document_path)
+        return resolve_document_path(self.document_path)
+
+    @property
+    def source_code(self) -> str:
+        return LANGUAGES[self.source_language]
+
+    @property
+    def target_code(self) -> str:
+        return LANGUAGES[self.target_language]
+
+    @property
+    def ocr_tag(self) -> str:
+        tag = self.ocr_language
+        if not tag or tag == "auto" or not tag.lower().startswith(self.source_code):
+            return OCR_TAGS[self.source_code]
+        return tag
 
 
 # Valores de versiones anteriores que se actualizan al cargar. El proyecto se
 # llamaba "VocabLens": estas referencias al nombre antiguo son intencionadas.
 LEGACY_APP_NAME = "VocabLens"
 _LEGACY_BAND_DEFAULTS = {"top_band_fraction": 0.25, "bottom_band_fraction": 0.30}
+# config.json de cuando los datos vivían en la carpeta del proyecto.
+LEGACY_PROJECT_CONFIG = PROJECT_ROOT / "config.json"
 
 
 def _migrate(data: dict) -> bool:
@@ -110,47 +127,76 @@ def _migrate(data: dict) -> bool:
     if data.get("app_name") == LEGACY_APP_NAME:
         data["app_name"] = Settings.app_name
         changed = True
-    doc = data.get("document_path")
-    if isinstance(doc, str) and doc:
-        old_default = Path.home() / "Documents" / LEGACY_APP_NAME / "Vocabulario.docx"
-        old_project = PROJECT_ROOT.parent / LEGACY_APP_NAME  # carpeta antes del renombrado
-        path = Path(os.path.expandvars(os.path.expanduser(doc)))
-        if path == old_default:
-            new = DEFAULT_DOCUMENT
-        elif path.is_absolute() and path.is_relative_to(old_project) and old_project != PROJECT_ROOT:
-            new = str(path.relative_to(old_project))
-        elif path.is_absolute():
-            new = to_project_relative(path)
-        else:
-            new = doc
-        if new != doc:
-            data["document_path"] = new
-            changed = True
     for key, legacy in _LEGACY_BAND_DEFAULTS.items():
         if data.get(key) == legacy:
             data[key] = getattr(Settings, key)
             changed = True
+    if data.get("ocr_language") == "en-US":  # antiguo valor fijo -> automático
+        data["ocr_language"] = "auto"
+        changed = True
     return changed
 
 
+def _import_legacy_project_config(path: Path) -> dict | None:
+    """Desarrollo: reutiliza el config.json que antes vivía junto al código.
+
+    Las rutas relativas del documento eran relativas al proyecto; se guardan ya
+    como absolutas. La configuración importada se da por completada.
+    """
+    if (
+        IS_FROZEN
+        or os.environ.get("WORDLENS_DATA_DIR")
+        or path != DEFAULT_CONFIG_PATH
+        or not LEGACY_PROJECT_CONFIG.exists()
+    ):
+        return None
+    try:
+        data = json.loads(LEGACY_PROJECT_CONFIG.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    doc = data.get("document_path")
+    if isinstance(doc, str) and doc and not Path(doc).is_absolute():
+        data["document_path"] = str(PROJECT_ROOT / doc)
+    data.setdefault("setup_complete", bool(doc))
+    log.info("Importada la configuración antigua de %s", LEGACY_PROJECT_CONFIG)
+    return data
+
+
 def load_settings(path: Path = DEFAULT_CONFIG_PATH) -> Settings:
-    """Carga config.json. Si no existe, lo crea con los valores por defecto.
+    """Carga config.json. Si no existe, devuelve valores por defecto (primer uso).
 
     Las claves desconocidas se ignoran y las ausentes toman el valor por defecto,
     así que un config.json antiguo sigue funcionando tras actualizar.
     """
     defaults = Settings()
-    if not path.exists():
-        save_settings(defaults, path)
-        return defaults
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        log.error("No se pudo leer %s (%s); se usan valores por defecto", path, exc)
+    data: dict | None = None
+    if path.exists():
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            log.error("No se pudo leer %s (%s); se usan valores por defecto", path, exc)
+            return defaults
+    else:
+        data = _import_legacy_project_config(path)
+        if data is None:
+            return defaults
+        _migrate(data)
+        settings = _from_dict(data, defaults)
+        save_settings(settings, path)
+        return settings
+    if not isinstance(data, dict):
         return defaults
     migrated = _migrate(data)
+    settings = _from_dict(data, defaults)
+    # Añade al archivo las claves nuevas que no tuviera.
+    known = {f.name for f in fields(Settings)}
+    if migrated or known - set(data):
+        save_settings(settings, path)
+    return settings
 
-    known = {f.name: f for f in fields(Settings)}
+
+def _from_dict(data: dict, defaults: Settings) -> Settings:
+    known = {f.name for f in fields(Settings)}
     kwargs = {}
     for key, value in data.items():
         if key not in known:
@@ -161,14 +207,11 @@ def load_settings(path: Path = DEFAULT_CONFIG_PATH) -> Settings:
             kwargs[key] = expected(value) if expected is not bool else bool(value)
         except (TypeError, ValueError):
             log.warning("Valor inválido para %s: %r; se usa el valor por defecto", key, value)
-    settings = Settings(**kwargs)
-    # Añade al archivo las claves nuevas que no tuviera.
-    if migrated or set(known) - set(data):
-        save_settings(settings, path)
-    return settings
+    return Settings(**kwargs)
 
 
 def save_settings(settings: Settings, path: Path = DEFAULT_CONFIG_PATH) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".json.tmp")
     tmp.write_text(json.dumps(asdict(settings), indent=2, ensure_ascii=False), encoding="utf-8")
     os.replace(tmp, path)

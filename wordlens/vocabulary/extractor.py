@@ -17,11 +17,9 @@ from typing import Any
 
 from wordfreq import zipf_frequency
 
+from .languages import TRANSLATION_STOPWORDS, profile
 from .models import VocabularyItem
 from .normalization import (
-    FUNCTION_WORDS,
-    PARTICLES,
-    SUBJECT_STARTERS,
     canonical_expression,
     dedup_key,
     fold,
@@ -83,15 +81,16 @@ def _strip_accents(text: str) -> str:
     )
 
 
-def is_transparent_cognate(expression: str, translation: str) -> bool:
+def is_transparent_cognate(expression: str, translation: str, target: str = "es") -> bool:
     """True si la traducción es casi la misma palabra (supermarket -> supermercado).
 
     Un cognado transparente no aporta nada a un hispanohablante. Los falsos amigos
     no se ven afectados: su traducción en contexto es otra palabra distinta.
     """
     expr = _strip_accents(expression)
+    stopwords = TRANSLATION_STOPWORDS.get(target, frozenset())
     for option in translation.split("/"):
-        words = [w for w in re.findall(r"[a-zñ]+", _strip_accents(option)) if w not in _ES_ARTICLES]
+        words = [w for w in re.findall(r"[a-zñ]+", _strip_accents(option)) if w not in stopwords]
         if len(words) != 1:
             continue
         word = words[0]
@@ -102,23 +101,43 @@ def is_transparent_cognate(expression: str, translation: str) -> bool:
     return False
 
 
-_ES_ARTICLES = frozenset({"el", "la", "los", "las", "un", "una", "lo", "ser", "estar"})
+_ES_INFINITIVE = re.compile(r"^(\w+?)(?:ar|er|ir)(?:se|me|te|nos|os|le|la|lo|les)?$")
+_ES_PLACEHOLDERS = frozenset("algo alguien uno una se me te nos os le les".split())
 
 
-def _grounded(expression: str, context: str) -> bool:
+def _grounded(expression: str, context: str, lang: str = "en") -> bool:
     """Cada palabra de contenido de la expresión debe aparecer en el subtítulo."""
     ctx_tokens = tokenize(context)
-    ctx_forms = set(ctx_tokens) | {lemma(t) for t in ctx_tokens}
-    for tok in expression.replace("-", " ").split():
-        if tok in _PLACEHOLDER_TOKENS:
+    ctx_forms = set(ctx_tokens) | {lemma(t, lang) for t in ctx_tokens}
+    placeholders = _PLACEHOLDER_TOKENS if lang == "en" else _ES_PLACEHOLDERS
+    tokens = expression.replace("-", " ").split()
+    for i, tok in enumerate(tokens):
+        if tok in placeholders:
             continue
-        if tok in ctx_forms or lemma(tok) in ctx_forms:
+        if tok in ctx_forms or lemma(tok, lang) in ctx_forms:
             continue
         # Tolerancia a pequeñas diferencias de flexión/ortografía.
         if len(tok) >= 5 and any(c.startswith(tok[:5]) for c in ctx_tokens):
             continue
+        if lang == "es" and i == 0 and len(tokens) > 1 and _es_verb_grounded(tok, ctx_tokens):
+            continue
         return False
     return True
+
+
+def _es_verb_grounded(token: str, ctx_tokens: list[str]) -> bool:
+    """Infinitivo español frente a una forma conjugada ("echar" ~ "echo", "darse" ~ "di").
+
+    Se acepta si la raíz aparece en el subtítulo; los verbos muy irregulares
+    (raíz de 1-2 letras) se aceptan siempre que el resto de la expresión sí esté.
+    """
+    m = _ES_INFINITIVE.match(token)
+    if not m:
+        return False
+    stem = m.group(1)
+    if len(stem) <= 2:
+        return True
+    return any(c.startswith(stem[:4]) or c.startswith(stem) for c in ctx_tokens)
 
 
 def validate_item(
@@ -128,8 +147,11 @@ def validate_item(
     max_single_word_zipf: float = 4.5,
     max_words: int = 6,
     grounding_text: str | None = None,
+    source: str = "en",
+    target: str = "es",
 ) -> VocabularyItem | None:
     """Devuelve un VocabularyItem limpio o None si no merece guardarse."""
+    lang = profile(source)
     expression = raw_item.get("expression")
     translation = raw_item.get("translation")
     if not isinstance(expression, str) or not isinstance(translation, str):
@@ -137,7 +159,7 @@ def validate_item(
     if re.search(r"\d", expression):
         return None
 
-    expr = canonical_expression(expression)
+    expr = canonical_expression(expression, source)
     trans = clean_translation(translation)
     words = expr.split()
 
@@ -148,32 +170,35 @@ def validate_item(
         reason = "demasiado larga"
     elif len(trans) > 90:
         reason = "traducción demasiado larga"
-    elif not re.fullmatch(r"[a-z' \-]+", expr):
+    elif not lang.expression_pattern.fullmatch(expr):
         reason = "caracteres no válidos"
-    elif dedup_key(trans) == dedup_key(expr):
+    elif dedup_key(trans, source) == dedup_key(expr, source):
         reason = "sin traducir"
-    elif len(words) >= 3 and words[0] in SUBJECT_STARTERS:
+    elif len(words) >= 3 and words[0] in lang.subject_starters:
         reason = "parece una frase completa"
-    elif (grounding_text or context) and not _grounded(expr, grounding_text or context):
+    elif (grounding_text or context) and not _grounded(expr, grounding_text or context, source):
         reason = "no aparece en el subtítulo"
     elif len(words) == 1:
-        if expr in FUNCTION_WORDS or len(expr) < 3:
+        if expr in lang.function_words or len(expr) < 3:
             reason = "palabra funcional"
-        elif zipf_frequency(expr, "en") >= max_single_word_zipf and zipf_frequency(
-            lemma(expr), "en"
+        elif zipf_frequency(expr, source) >= max_single_word_zipf and zipf_frequency(
+            lemma(expr, source), source
         ) >= max_single_word_zipf:
             reason = "palabra demasiado básica"
-        elif is_transparent_cognate(expr, trans):
+        elif is_transparent_cognate(expr, trans, target):
             reason = "cognado transparente"
     else:
-        content = [w for w in words if w not in FUNCTION_WORDS and w not in _PLACEHOLDER_TOKENS]
-        has_particle = any(w in PARTICLES for w in words[1:])
+        content = [w for w in words if w not in lang.function_words and w not in _PLACEHOLDER_TOKENS]
+        has_particle = any(w in lang.particles for w in words[1:])
+        if source == "es" and _ES_INFINITIVE.match(words[0]):
+            # Locución verbal ("echar de menos", "dar igual"): el equivalente a un phrasal verb.
+            has_particle = True
         if not content:
             reason = "sin palabras de contenido"
         elif (
             len(content) == 1
             and not has_particle
-            and zipf_frequency(lemma(content[0]), "en") >= max_single_word_zipf
+            and zipf_frequency(lemma(content[0], source), source) >= max_single_word_zipf
         ):
             # "for weeks", "eat something": combinación libre de una palabra básica.
             reason = "combinación trivial"
@@ -187,7 +212,7 @@ def validate_item(
 _TRIVIAL_ZIPF = 5.0
 
 
-def is_trivial_line(text: str) -> bool:
+def is_trivial_line(text: str, lang: str = "en") -> bool:
     """True si la línea es tan básica que no merece una llamada al LLM.
 
     Sólo se aplica a líneas cortas ("Where are you going?", "See you tomorrow.")
@@ -198,6 +223,7 @@ def is_trivial_line(text: str) -> bool:
         return True
     if len(tokens) > 4:
         return False
-    if any(t in PARTICLES for t in tokens[1:]):
+    prof = profile(lang)
+    if any(t in prof.particles for t in tokens[1:]):
         return False
-    return all(t in FUNCTION_WORDS or zipf_frequency(t, "en") >= _TRIVIAL_ZIPF for t in tokens)
+    return all(t in prof.function_words or zipf_frequency(t, lang) >= _TRIVIAL_ZIPF for t in tokens)

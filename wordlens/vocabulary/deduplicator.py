@@ -12,23 +12,26 @@ from .normalization import dedup_key
 class Deduplicator:
     """Conjunto thread-safe de claves normalizadas."""
 
-    def __init__(self, existing: Iterable[str] = ()) -> None:
+    def __init__(self, existing: Iterable[str] = (), lang: str = "en") -> None:
+        self.lang = lang
         self._lock = threading.Lock()
         self._keys: set[str] = set()
         self.reset(existing)
 
-    def reset(self, expressions: Iterable[str]) -> None:
+    def reset(self, expressions: Iterable[str], lang: str | None = None) -> None:
         with self._lock:
-            self._keys = {k for k in (dedup_key(e) for e in expressions) if k}
+            if lang is not None:
+                self.lang = lang
+            self._keys = {k for k in (dedup_key(e, self.lang) for e in expressions) if k}
 
     def contains(self, expression: str) -> bool:
-        key = dedup_key(expression)
+        key = dedup_key(expression, self.lang)
         with self._lock:
             return key in self._keys
 
     def add(self, expression: str) -> bool:
         """Añade la expresión; devuelve False si ya existía."""
-        key = dedup_key(expression)
+        key = dedup_key(expression, self.lang)
         if not key:
             return False
         with self._lock:
@@ -43,7 +46,7 @@ class Deduplicator:
         with self._lock:
             batch_keys: set[str] = set()
             for item in items:
-                key = dedup_key(item.expression)
+                key = dedup_key(item.expression, self.lang)
                 if key and key not in self._keys and key not in batch_keys:
                     batch_keys.add(key)
                     new.append(item)

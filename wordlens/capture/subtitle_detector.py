@@ -1,7 +1,7 @@
 """De líneas OCR a subtítulos nuevos.
 
 1. extract_subtitles(): descarta lo que no parece un subtítulo (relojes, logos,
-   menús, basura del OCR, texto no inglés) y une los subtítulos de dos líneas.
+   menús, basura del OCR, texto en otro idioma) y une los subtítulos de dos líneas.
 2. SubtitleTracker: exige que un subtítulo se vea en N capturas consecutivas
    (estabilidad, evita leerlo a medio fundido) y recuerda los ya emitidos
    durante una ventana de tiempo para no reenviarlos al LLM. Pasada esa ventana,
@@ -32,27 +32,37 @@ _LEADING_JUNK = re.compile(r"^[\s\-–—•·*>\[\]♪#]+")
 _TRAILING_JUNK = re.compile(r"[\s♪#*]+$")
 
 
-def clean_ocr_text(text: str) -> str:
+def clean_ocr_text(text: str, language: str = "en") -> str:
     text = fold(text).strip()
     text = _LEADING_JUNK.sub("", text)
     text = _TRAILING_JUNK.sub("", text)
-    for pattern, repl in _OCR_FIXES:
+    fixes = _OCR_FIXES if language == "en" else _OCR_FIXES[1:]  # "| don't" -> "I" sólo en inglés
+    for pattern, repl in fixes:
         text = pattern.sub(repl, text)
     return text.strip()
 
 
-def _is_english_token(token: str) -> bool:
-    en = zipf_frequency(token, "en")
-    # Se compara con el español: "la", "en", "para" existen en corpus ingleses,
+_OTHER_LANGUAGE = {"en": "es", "es": "en"}
+
+
+def _is_language_token(token: str, language: str) -> bool:
+    own = zipf_frequency(token, language)
+    # Se compara con el otro idioma: "la", "en", "para" existen en corpus ingleses,
     # pero son mucho más frecuentes en español (menús de juegos, apps, etc.).
-    return en >= 1.5 and en + 1.0 >= zipf_frequency(token, "es")
+    other = _OTHER_LANGUAGE.get(language, "en")
+    return own >= 1.5 and own + 1.0 >= zipf_frequency(token, other)
 
 
-def english_ratio(text: str) -> float:
+def language_ratio(text: str, language: str = "en") -> float:
+    """Proporción de palabras de `text` que pertenecen al idioma de los subtítulos."""
     tokens = tokenize(text)
     if not tokens:
         return 0.0
-    return sum(1 for t in tokens if _is_english_token(t)) / len(tokens)
+    return sum(1 for t in tokens if _is_language_token(t, language)) / len(tokens)
+
+
+def english_ratio(text: str) -> float:
+    return language_ratio(text, "en")
 
 
 def looks_like_subtitle(
@@ -62,8 +72,9 @@ def looks_like_subtitle(
     min_words: int = 2,
     min_english_ratio: float = 0.7,
     require_centered: bool = True,
+    language: str = "en",
 ) -> bool:
-    text = clean_ocr_text(line.text)
+    text = clean_ocr_text(line.text, language)
     words = tokenize(text)
     if len(words) < min_words:
         return False
@@ -77,7 +88,7 @@ def looks_like_subtitle(
         rel = line.center_x / band_width
         if not 0.2 <= rel <= 0.8:  # menús laterales, logos de canal, relojes
             return False
-    return english_ratio(text) >= min_english_ratio
+    return language_ratio(text, language) >= min_english_ratio
 
 
 def group_lines(lines: list[OcrLine]) -> list[list[OcrLine]]:
@@ -101,6 +112,7 @@ def extract_subtitles(
     min_words: int = 2,
     min_english_ratio: float = 0.7,
     require_centered: bool = True,
+    language: str = "en",
 ) -> list[str]:
     kept = [
         ln
@@ -111,11 +123,12 @@ def extract_subtitles(
             min_words=min_words,
             min_english_ratio=min_english_ratio,
             require_centered=require_centered,
+            language=language,
         )
     ]
     subtitles = []
     for group in group_lines(kept):
-        text = " ".join(clean_ocr_text(ln.text) for ln in group)
+        text = " ".join(clean_ocr_text(ln.text, language) for ln in group)
         text = re.sub(r"\s{2,}", " ", text).strip()
         if text:
             subtitles.append(text)

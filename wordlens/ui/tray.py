@@ -1,40 +1,31 @@
-"""Icono en la bandeja del sistema: estado, menú y notificaciones."""
+"""Icono en la bandeja del sistema: estado, menú y notificaciones.
+
+pystray ejecuta su bucle de mensajes en su propio hilo (run_detached); las
+acciones del menú se pasan a la ventana con call_soon() para que se ejecuten
+en el hilo de Tk.
+"""
 
 from __future__ import annotations
 
 import logging
-import os
-import subprocess
-import threading
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pystray
-from PIL import Image, ImageDraw, ImageFont
 
-from wordlens.app import SessionStats, WordLensApp
-from wordlens.config.settings import DEFAULT_CONFIG_PATH, LOG_DIR, save_settings, to_project_relative
 from wordlens.state import AppState
+from wordlens.ui.icon import render_icon, with_status_dot
+
+if TYPE_CHECKING:
+    from wordlens.ui.window import MainWindow
 
 log = logging.getLogger(__name__)
 
-STATE_COLORS = {
-    AppState.INACTIVE: (128, 128, 128),
-    AppState.CAPTURING: (46, 160, 67),
-    AppState.PROCESSING: (230, 145, 30),
-    AppState.STOPPED: (200, 50, 50),
+DOT_COLORS = {
+    "Capturing": (22, 163, 74),
+    "Processing": (217, 119, 6),
+    "Starting…": (217, 119, 6),
+    "Error": (220, 38, 38),
 }
-
-
-def make_icon(state: AppState, size: int = 64) -> Image.Image:
-    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
-    draw.ellipse((2, 2, size - 2, size - 2), fill=STATE_COLORS[state] + (255,))
-    try:
-        font = ImageFont.truetype("arialbd.ttf", int(size * 0.6))
-    except OSError:
-        font = ImageFont.load_default()
-    draw.text((size / 2, size / 2), "W", font=font, fill="white", anchor="mm")
-    return img
 
 
 def pretty_hotkey(spec: str) -> str:
@@ -42,58 +33,80 @@ def pretty_hotkey(spec: str) -> str:
 
 
 class TrayUI:
-    def __init__(self, app: WordLensApp) -> None:
-        self.app = app
-        s = app.settings
+    def __init__(self, window: MainWindow) -> None:
+        self.window = window
+        self.app = window.app
+        self._base = render_icon(64)
+        self._icons: dict[str, object] = {}
+        self._last_status = ""
+        w = window
         self.icon = pystray.Icon(
             "WordLens",
-            icon=make_icon(app.state.state),
+            icon=self._icon_for(self._status()),
             title=self._title(),
             menu=pystray.Menu(
-                pystray.MenuItem(lambda _: f"Estado: {self.app.state.state.value}", None, enabled=False),
-                pystray.MenuItem(
-                    lambda _: f"Documento: {self.app.settings.document.name}", None, enabled=False
-                ),
+                pystray.MenuItem("Open WordLens", lambda *_: w.call_soon(w.show), default=True),
+                pystray.MenuItem(lambda _: f"Status: {self._status()}", None, enabled=False),
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem(
-                    f"Iniciar captura ({pretty_hotkey(s.hotkey_start)})",
-                    self._on_start,
-                    enabled=lambda _: not self.app.state.is_active,
-                    default=True,
+                    lambda _: f"Start  ({pretty_hotkey(self.app.settings.hotkey_start)})",
+                    lambda *_: w.call_soon(w.start_capture),
+                    enabled=lambda _: not self.app.state.is_active and self.app.settings.setup_complete,
                 ),
                 pystray.MenuItem(
-                    f"Detener captura ({pretty_hotkey(s.hotkey_stop)})",
-                    self._on_stop,
+                    lambda _: f"Stop  ({pretty_hotkey(self.app.settings.hotkey_stop)})",
+                    lambda *_: w.call_soon(w.stop_capture),
                     enabled=lambda _: self.app.state.is_active,
                 ),
                 pystray.Menu.SEPARATOR,
-                pystray.MenuItem("Abrir documento Word", self._open_document),
                 pystray.MenuItem(
-                    "Elegir documento Word…",
-                    self._choose_document,
-                    enabled=lambda _: not self.app.state.is_active,
+                    "Open vocabulary document",
+                    lambda *_: w.call_soon(w.open_document),
+                    enabled=lambda _: self.app.settings.setup_complete,
                 ),
-                pystray.MenuItem("Abrir carpeta del documento", self._open_folder),
-                pystray.MenuItem("Editar configuración", self._open_config),
-                pystray.MenuItem("Ver registro", self._open_log),
+                pystray.MenuItem(
+                    "Change vocabulary document…",
+                    lambda *_: w.call_soon(self._change_document),
+                    enabled=lambda _: not self.app.state.is_active and self.app.settings.setup_complete,
+                ),
+                pystray.MenuItem("Settings…", lambda *_: w.call_soon(self._settings)),
                 pystray.Menu.SEPARATOR,
-                pystray.MenuItem("Salir", self._quit),
+                pystray.MenuItem("Exit", lambda *_: w.call_soon(w.exit)),
             ),
         )
-        app.state.subscribe(lambda _old, _new: self.refresh())
-        app.on_stats(lambda _stats: self.refresh())
-        app.set_notifier(self.notify)
+
+    def _status(self) -> str:
+        try:
+            return self.window.status_text()
+        except Exception:  # durante el arranque
+            return "Ready"
+
+    def _icon_for(self, status: str):
+        if status not in self._icons:
+            self._icons[status] = with_status_dot(self._base, DOT_COLORS.get(status))
+        return self._icons[status]
 
     def _title(self) -> str:
-        st: SessionStats = self.app.stats
-        title = f"{self.app.settings.app_name} — {self.app.state.state.value}"
-        if self.app.state.state is not AppState.INACTIVE:
-            title += f" ({st.added} nuevas)"
+        status = self._status()
+        title = f"WordLens — {status}"
+        if self.app.state.state is not AppState.INACTIVE and status != "Error":
+            title += f" ({self.app.stats.added} new)"
         return title[:127]  # límite de Windows para tooltips
+
+    def _change_document(self) -> None:
+        self.window.show()
+        self.window.change_document()
+
+    def _settings(self) -> None:
+        self.window.show()
+        self.window.open_settings()
 
     def refresh(self) -> None:
         try:
-            self.icon.icon = make_icon(self.app.state.state)
+            status = self._status()
+            if status != self._last_status:
+                self._last_status = status
+                self.icon.icon = self._icon_for(status)
             self.icon.title = self._title()
             self.icon.update_menu()
         except Exception:
@@ -105,78 +118,11 @@ class TrayUI:
         except Exception:
             log.debug("Notificación no disponible", exc_info=True)
 
-    # --------------------------------------------------------------- acciones
-    def _on_start(self, *_):
-        threading.Thread(target=self.app.start, daemon=True).start()
+    def start(self) -> None:
+        self.icon.run_detached()
 
-    def _on_stop(self, *_):
-        threading.Thread(target=self.app.stop, daemon=True).start()
-
-    def _open_document(self, *_):
-        path = self.app.settings.document
-        if path.exists():
-            os.startfile(path)  # noqa: S606
-        else:
-            self.notify(self.app.settings.app_name, "El documento aún no existe; se creará al iniciar.")
-
-    def _open_folder(self, *_):
-        path = self.app.settings.document
-        folder = path.parent
-        folder.mkdir(parents=True, exist_ok=True)
-        if path.exists():
-            subprocess.Popen(["explorer", "/select,", str(path)])
-        else:
-            os.startfile(folder)  # noqa: S606
-
-    def _open_config(self, *_):
-        subprocess.Popen(["notepad.exe", str(DEFAULT_CONFIG_PATH)])
-        self.notify(
-            self.app.settings.app_name,
-            "Tras guardar config.json, reinicia WordLens para aplicar los cambios.",
-        )
-
-    def _open_log(self, *_):
-        log_file = LOG_DIR / "wordlens.log"
-        if log_file.exists():
-            subprocess.Popen(["notepad.exe", str(log_file)])
-
-    def _choose_document(self, *_):
-        threading.Thread(target=self._choose_document_dialog, daemon=True).start()
-
-    def _choose_document_dialog(self) -> None:
-        import tkinter as tk
-        from tkinter import filedialog
-
-        current = self.app.settings.document
-        root = tk.Tk()
-        root.withdraw()
-        root.attributes("-topmost", True)
+    def stop(self) -> None:
         try:
-            chosen = filedialog.asksaveasfilename(
-                parent=root,
-                title="Elige o crea el documento de vocabulario (no se sobrescribe si ya existe)",
-                initialdir=str(current.parent if current.parent.exists() else Path.home()),
-                initialfile=current.name,
-                defaultextension=".docx",
-                filetypes=[("Documento de Word", "*.docx")],
-                confirmoverwrite=False,
-            )
-        finally:
-            root.destroy()
-        if not chosen:
-            return
-        self.app.settings.document_path = to_project_relative(chosen)
-        save_settings(self.app.settings)
-        state = "existente (se conservará su contenido)" if Path(chosen).exists() else "nuevo"
-        self.notify(self.app.settings.app_name, f"Documento {state}: {Path(chosen).name}")
-        self.refresh()
-
-    def _quit(self, *_):
-        def _do():
-            self.app.shutdown()
             self.icon.stop()
-
-        threading.Thread(target=_do, daemon=True).start()
-
-    def run(self) -> None:
-        self.icon.run()
+        except Exception:
+            log.debug("No se pudo cerrar el icono", exc_info=True)

@@ -19,6 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from wordlens.ai.vocabulary_analyzer import VocabularyAnalyzer  # noqa: E402
+from wordlens.config.paths import BACKUP_DIR  # noqa: E402
 from wordlens.config.settings import load_settings  # noqa: E402
 from wordlens.document.word_writer import WordWriter  # noqa: E402
 from wordlens.vocabulary.deduplicator import Deduplicator  # noqa: E402
@@ -55,8 +56,10 @@ def main() -> int:
     batch_size = args.batch or settings.batch_max_lines
 
     analyzer = VocabularyAnalyzer(settings)
-    writer = None if args.dry_run else WordWriter(settings.document, settings.backup_count)
-    dedup = Deduplicator()
+    writer = None if args.dry_run else WordWriter(
+        settings.document, settings.backup_count, backup_dir=BACKUP_DIR, lang=settings.source_code
+    )
+    dedup = Deduplicator(lang=settings.source_code)
     if writer:
         writer.ensure_exists()
         dedup.reset(writer.read_expressions())

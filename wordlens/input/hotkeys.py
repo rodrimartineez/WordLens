@@ -104,7 +104,7 @@ class HotkeyManager:
                 log.info("Atajo registrado: %s", spec)
             else:
                 err = ctypes.get_last_error()
-                msg = "ya lo usa otra aplicación" if err == 1409 else f"error Win32 {err}"
+                msg = "already used by another application" if err == 1409 else f"Win32 error {err}"
                 self.failed[spec] = msg
                 log.error("No se pudo registrar el atajo %s: %s", spec, msg)
         self._ready.set()

@@ -17,5 +17,3 @@ wordfreq>=3.1
 python-docx>=1.1
 # Icono de bandeja del sistema
 pystray>=0.19
-# Tests
-pytest>=8.0

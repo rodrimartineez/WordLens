@@ -11,6 +11,7 @@ import json
 import logging
 import socket
 import threading
+from collections.abc import Callable
 from typing import Any
 from urllib.parse import urlparse
 
@@ -32,7 +33,10 @@ class OllamaAborted(OllamaError):
 class OllamaClient:
     def __init__(self, base_url: str = "http://localhost:11434", timeout: float = 180.0) -> None:
         parsed = urlparse(base_url)
-        self.host = parsed.hostname or "localhost"
+        # "localhost" en Windows prueba antes IPv6 (::1); Ollama escucha en IPv4 y
+        # cada conexión pagaba ~2 s de espera. Se usa la dirección IPv4 directamente.
+        host = parsed.hostname or "127.0.0.1"
+        self.host = "127.0.0.1" if host == "localhost" else host
         self.port = parsed.port or 11434
         self.timeout = timeout
         self._lock = threading.Lock()
@@ -116,6 +120,43 @@ class OllamaClient:
         if schema is not None:
             body["format"] = schema
         return self._request("POST", "/api/chat", body)
+
+    def pull(self, model: str, on_progress: Callable[[str, int, int], None] | None = None) -> None:
+        """Descarga un modelo (POST /api/pull en streaming). Cancelable con abort().
+
+        on_progress(estado, completado, total) se llama con cada línea de progreso.
+        """
+        conn = http.client.HTTPConnection(self.host, self.port, timeout=60)
+        with self._lock:
+            self._active = conn
+            self._aborted = False
+        try:
+            body = json.dumps({"model": model, "stream": True}).encode("utf-8")
+            conn.request("POST", "/api/pull", body=body, headers={"Content-Type": "application/json"})
+            resp = conn.getresponse()
+            if resp.status != 200:
+                raise OllamaError(f"Ollama respondió {resp.status}: {resp.read()[:300]!r}")
+            for raw in resp:
+                line = raw.strip()
+                if not line:
+                    continue
+                data = json.loads(line.decode("utf-8"))
+                if "error" in data:
+                    raise OllamaError(str(data["error"]))
+                if on_progress:
+                    on_progress(data.get("status", ""), int(data.get("completed", 0)), int(data.get("total", 0)))
+        except (ConnectionRefusedError, socket.gaierror) as exc:
+            raise OllamaUnavailableError(f"No se puede conectar con Ollama en {self.host}:{self.port}") from exc
+        except (OSError, http.client.HTTPException) as exc:
+            with self._lock:
+                aborted = self._aborted
+            if aborted:
+                raise OllamaAborted("Descarga cancelada") from exc
+            raise OllamaUnavailableError(f"Error de comunicación con Ollama: {exc}") from exc
+        finally:
+            with self._lock:
+                self._active = None
+            conn.close()
 
     def warm_up(self, model: str, keep_alive: str = "30m") -> None:
         """Carga el modelo en memoria para que el primer subtítulo no espere."""
