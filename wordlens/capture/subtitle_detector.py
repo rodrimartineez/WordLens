@@ -19,8 +19,8 @@ from difflib import SequenceMatcher
 
 from wordfreq import zipf_frequency
 
-from vocablens.ocr.ocr_engine import OcrLine
-from vocablens.vocabulary.normalization import fold, normalize_text, tokenize
+from wordlens.ocr.ocr_engine import OcrLine
+from wordlens.vocabulary.normalization import fold, normalize_text, tokenize
 
 # Correcciones típicas del OCR en subtítulos.
 _OCR_FIXES = [

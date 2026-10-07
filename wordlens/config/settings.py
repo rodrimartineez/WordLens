@@ -15,14 +15,30 @@ DEFAULT_CONFIG_PATH = PROJECT_ROOT / "config.json"
 LOG_DIR = PROJECT_ROOT / "logs"
 
 
-def _default_document() -> str:
-    return str(Path.home() / "Documents" / "VocabLens" / "Vocabulario.docx")
+# El documento vive dentro de la carpeta del proyecto. Se guarda como ruta
+# relativa en config.json para que siga funcionando si la carpeta se mueve.
+DEFAULT_DOCUMENT = "Vocabulario.docx"
+
+
+def resolve_project_path(value: str) -> Path:
+    """Rutas relativas -> relativas a la carpeta del proyecto; absolutas, tal cual."""
+    path = Path(os.path.expandvars(os.path.expanduser(value)))
+    return path if path.is_absolute() else PROJECT_ROOT / path
+
+
+def to_project_relative(path: Path | str) -> str:
+    """Devuelve la ruta relativa al proyecto si está dentro de él; si no, absoluta."""
+    path = Path(path)
+    try:
+        return str(path.resolve().relative_to(PROJECT_ROOT))
+    except ValueError:
+        return str(path)
 
 
 @dataclass
 class Settings:
     # General
-    app_name: str = "VocabLens"
+    app_name: str = "WordLens"
     target_level: str = "B2-C1"
     source_language: str = "English"
     target_language: str = "Spanish"
@@ -38,8 +54,8 @@ class Settings:
     # Captura de pantalla
     monitor: int = 1  # 1 = monitor principal (numeración de mss)
     capture_interval_seconds: float = 0.5
-    top_band_fraction: float = 0.25
-    bottom_band_fraction: float = 0.30
+    top_band_fraction: float = 0.33  # tercio superior
+    bottom_band_fraction: float = 0.33  # tercio inferior
     scan_top: bool = True
     scan_bottom: bool = True
 
@@ -75,11 +91,46 @@ class Settings:
 
     def __post_init__(self) -> None:
         if not self.document_path:
-            self.document_path = _default_document()
+            self.document_path = DEFAULT_DOCUMENT
 
     @property
     def document(self) -> Path:
-        return Path(os.path.expandvars(os.path.expanduser(self.document_path)))
+        return resolve_project_path(self.document_path)
+
+
+# Valores de versiones anteriores que se actualizan al cargar. El proyecto se
+# llamaba "VocabLens": estas referencias al nombre antiguo son intencionadas.
+LEGACY_APP_NAME = "VocabLens"
+_LEGACY_BAND_DEFAULTS = {"top_band_fraction": 0.25, "bottom_band_fraction": 0.30}
+
+
+def _migrate(data: dict) -> bool:
+    """Actualiza un config.json antiguo. Devuelve True si ha cambiado algo."""
+    changed = False
+    if data.get("app_name") == LEGACY_APP_NAME:
+        data["app_name"] = Settings.app_name
+        changed = True
+    doc = data.get("document_path")
+    if isinstance(doc, str) and doc:
+        old_default = Path.home() / "Documents" / LEGACY_APP_NAME / "Vocabulario.docx"
+        old_project = PROJECT_ROOT.parent / LEGACY_APP_NAME  # carpeta antes del renombrado
+        path = Path(os.path.expandvars(os.path.expanduser(doc)))
+        if path == old_default:
+            new = DEFAULT_DOCUMENT
+        elif path.is_absolute() and path.is_relative_to(old_project) and old_project != PROJECT_ROOT:
+            new = str(path.relative_to(old_project))
+        elif path.is_absolute():
+            new = to_project_relative(path)
+        else:
+            new = doc
+        if new != doc:
+            data["document_path"] = new
+            changed = True
+    for key, legacy in _LEGACY_BAND_DEFAULTS.items():
+        if data.get(key) == legacy:
+            data[key] = getattr(Settings, key)
+            changed = True
+    return changed
 
 
 def load_settings(path: Path = DEFAULT_CONFIG_PATH) -> Settings:
@@ -97,6 +148,7 @@ def load_settings(path: Path = DEFAULT_CONFIG_PATH) -> Settings:
     except (OSError, json.JSONDecodeError) as exc:
         log.error("No se pudo leer %s (%s); se usan valores por defecto", path, exc)
         return defaults
+    migrated = _migrate(data)
 
     known = {f.name: f for f in fields(Settings)}
     kwargs = {}
@@ -111,7 +163,7 @@ def load_settings(path: Path = DEFAULT_CONFIG_PATH) -> Settings:
             log.warning("Valor inválido para %s: %r; se usa el valor por defecto", key, value)
     settings = Settings(**kwargs)
     # Añade al archivo las claves nuevas que no tuviera.
-    if set(known) - set(data):
+    if migrated or set(known) - set(data):
         save_settings(settings, path)
     return settings
 

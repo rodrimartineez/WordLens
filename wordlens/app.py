@@ -18,18 +18,18 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from vocablens.ai.ollama_client import (
+from wordlens.ai.ollama_client import (
     OllamaAborted,
     OllamaClient,
     OllamaError,
     OllamaUnavailableError,
 )
-from vocablens.ai.vocabulary_analyzer import VocabularyAnalyzer
-from vocablens.config.settings import Settings
-from vocablens.document.word_writer import DocumentError, DocumentLockedError, WordWriter
-from vocablens.state import AppState, StateMachine
-from vocablens.vocabulary.deduplicator import Deduplicator
-from vocablens.vocabulary.models import SubtitleLine, VocabularyItem
+from wordlens.ai.vocabulary_analyzer import VocabularyAnalyzer
+from wordlens.config.settings import Settings
+from wordlens.document.word_writer import DocumentError, DocumentLockedError, WordWriter
+from wordlens.state import AppState, StateMachine
+from wordlens.vocabulary.deduplicator import Deduplicator
+from wordlens.vocabulary.models import SubtitleLine, VocabularyItem
 
 log = logging.getLogger(__name__)
 
@@ -48,7 +48,7 @@ class SessionStats:
     last_added: list[str] = field(default_factory=list)
 
 
-class VocabLensApp:
+class WordLensApp:
     def __init__(self, settings: Settings, notifier: Notifier | None = None) -> None:
         self.settings = settings
         self.state = StateMachine()
@@ -200,14 +200,14 @@ class VocabLensApp:
     # ---------------------------------------------------------- hilo captura
     def _capture_loop(self, stop: threading.Event, q: queue.Queue[SubtitleLine]) -> None:
         # Imports aquí: mss/WinRT deben inicializarse en este hilo.
-        from vocablens.capture.screen_capture import (
+        from wordlens.capture.screen_capture import (
             ChangeDetector,
             ScreenCapturer,
             enable_dpi_awareness,
             prepare_for_ocr,
         )
-        from vocablens.capture.subtitle_detector import SubtitleTracker, extract_subtitles
-        from vocablens.ocr.ocr_engine import OcrUnavailableError, WindowsOcr
+        from wordlens.capture.subtitle_detector import SubtitleTracker, extract_subtitles
+        from wordlens.ocr.ocr_engine import OcrUnavailableError, WindowsOcr
 
         s = self.settings
         enable_dpi_awareness()

@@ -11,9 +11,9 @@ from pathlib import Path
 import pystray
 from PIL import Image, ImageDraw, ImageFont
 
-from vocablens.app import SessionStats, VocabLensApp
-from vocablens.config.settings import DEFAULT_CONFIG_PATH, LOG_DIR, save_settings
-from vocablens.state import AppState
+from wordlens.app import SessionStats, WordLensApp
+from wordlens.config.settings import DEFAULT_CONFIG_PATH, LOG_DIR, save_settings, to_project_relative
+from wordlens.state import AppState
 
 log = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ def make_icon(state: AppState, size: int = 64) -> Image.Image:
         font = ImageFont.truetype("arialbd.ttf", int(size * 0.6))
     except OSError:
         font = ImageFont.load_default()
-    draw.text((size / 2, size / 2), "V", font=font, fill="white", anchor="mm")
+    draw.text((size / 2, size / 2), "W", font=font, fill="white", anchor="mm")
     return img
 
 
@@ -42,11 +42,11 @@ def pretty_hotkey(spec: str) -> str:
 
 
 class TrayUI:
-    def __init__(self, app: VocabLensApp) -> None:
+    def __init__(self, app: WordLensApp) -> None:
         self.app = app
         s = app.settings
         self.icon = pystray.Icon(
-            "VocabLens",
+            "WordLens",
             icon=make_icon(app.state.state),
             title=self._title(),
             menu=pystray.Menu(
@@ -132,11 +132,11 @@ class TrayUI:
         subprocess.Popen(["notepad.exe", str(DEFAULT_CONFIG_PATH)])
         self.notify(
             self.app.settings.app_name,
-            "Tras guardar config.json, reinicia VocabLens para aplicar los cambios.",
+            "Tras guardar config.json, reinicia WordLens para aplicar los cambios.",
         )
 
     def _open_log(self, *_):
-        log_file = LOG_DIR / "vocablens.log"
+        log_file = LOG_DIR / "wordlens.log"
         if log_file.exists():
             subprocess.Popen(["notepad.exe", str(log_file)])
 
@@ -165,7 +165,7 @@ class TrayUI:
             root.destroy()
         if not chosen:
             return
-        self.app.settings.document_path = str(Path(chosen))
+        self.app.settings.document_path = to_project_relative(chosen)
         save_settings(self.app.settings)
         state = "existente (se conservará su contenido)" if Path(chosen).exists() else "nuevo"
         self.notify(self.app.settings.app_name, f"Documento {state}: {Path(chosen).name}")

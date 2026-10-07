@@ -1,6 +1,6 @@
 import pytest
 
-from vocablens.vocabulary.extractor import (
+from wordlens.vocabulary.extractor import (
     clean_translation,
     is_transparent_cognate,
     is_trivial_line,

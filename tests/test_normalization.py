@@ -1,6 +1,6 @@
 import pytest
 
-from vocablens.vocabulary.normalization import canonical_expression, dedup_key, lemma, normalize_text
+from wordlens.vocabulary.normalization import canonical_expression, dedup_key, lemma, normalize_text
 
 
 @pytest.mark.parametrize(

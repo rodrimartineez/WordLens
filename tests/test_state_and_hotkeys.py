@@ -5,7 +5,7 @@ from ctypes import wintypes
 
 import pytest
 
-from vocablens.input.hotkeys import (
+from wordlens.input.hotkeys import (
     MOD_ALT,
     MOD_CONTROL,
     MOD_SHIFT,
@@ -13,7 +13,7 @@ from vocablens.input.hotkeys import (
     HotkeyManager,
     parse_hotkey,
 )
-from vocablens.state import AppState, StateMachine
+from wordlens.state import AppState, StateMachine
 
 
 # ------------------------------------------------------------ máquina de estados

@@ -5,7 +5,7 @@ Formato de cada entrada (un párrafo):  **expresión** — traducción
 Estrategia de seguridad:
 - Nunca se crea un documento nuevo si ya existe uno en la ruta.
 - Si el archivo existente no se puede abrir como .docx, no se toca (error).
-- Al iniciar cada sesión se guarda una copia en .vocablens_backups/ (rotativa).
+- Al iniciar cada sesión se guarda una copia en .wordlens_backups/ (rotativa).
 - Cada guardado se hace en un archivo temporal del mismo directorio y luego se
   sustituye atómicamente con os.replace: un corte a mitad nunca deja el
   documento a medias.
@@ -29,14 +29,14 @@ from pathlib import Path
 import docx
 from docx.document import Document as DocxDocument
 
-from vocablens.vocabulary.models import VocabularyItem
-from vocablens.vocabulary.normalization import dedup_key
+from wordlens.vocabulary.models import VocabularyItem
+from wordlens.vocabulary.normalization import dedup_key
 
 log = logging.getLogger(__name__)
 
 SEPARATOR = " — "
 _SEPARATORS = (" — ", " – ", " - ", "—", "–")
-BACKUP_DIR_NAME = ".vocablens_backups"
+BACKUP_DIR_NAME = ".wordlens_backups"
 
 
 class DocumentError(Exception):
@@ -72,6 +72,13 @@ class WordWriter:
     def _load(self) -> DocxDocument:
         if not self.path.exists():
             return docx.Document()
+        # is_zipfile() devuelve False también si el archivo está bloqueado en
+        # exclusiva; hay que distinguirlo de un archivo corrupto.
+        try:
+            with open(self.path, "rb"):
+                pass
+        except PermissionError as exc:
+            raise DocumentLockedError(f"{self.path} está bloqueado por otro programa") from exc
         if not zipfile.is_zipfile(self.path):
             raise DocumentError(
                 f"{self.path} existe pero no es un .docx válido; no se modificará."
@@ -128,7 +135,7 @@ class WordWriter:
             return target
 
     def _save(self, document: DocxDocument) -> None:
-        tmp = self.path.with_name(f"~vocablens_{os.getpid()}_{self.path.name}")
+        tmp = self.path.with_name(f"~wordlens_{os.getpid()}_{self.path.name}")
         try:
             document.save(str(tmp))
             os.replace(tmp, self.path)
@@ -164,7 +171,8 @@ class WordWriter:
                 return []
             try:
                 document = self._load()
-            except DocumentLockedError:
+            except DocumentError:
+                # Bloqueado o ilegible: nada se pierde, queda en espera.
                 self._pending = queue
                 raise
             existing = {dedup_key(e) for e in self._expressions_in(document)}

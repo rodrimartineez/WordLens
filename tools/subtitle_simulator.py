@@ -1,7 +1,7 @@
 """Simula subtítulos en pantalla para probar la cadena completa sin una serie real.
 
 Abre una ventana a pantalla completa con un fondo que cambia (como un vídeo) y
-va mostrando subtítulos abajo y, de vez en cuando, arriba. Deja VocabLens
+va mostrando subtítulos abajo y, de vez en cuando, arriba. Deja WordLens
 capturando y observa cómo se rellena el documento.
 
   .venv\\Scripts\\python.exe tools\\subtitle_simulator.py            (Esc para salir)
@@ -47,7 +47,7 @@ def main() -> None:
                     subtitles.append((pos, raw.split(":", 1)[1].strip() if pos == "top" else raw))
 
     root = tk.Tk()
-    root.title("VocabLens - simulador de subtítulos")
+    root.title("WordLens - simulador de subtítulos")
     root.attributes("-fullscreen", True)
     root.configure(cursor="none")
     root.bind("<Escape>", lambda _e: root.destroy())

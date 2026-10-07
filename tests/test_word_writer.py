@@ -3,15 +3,15 @@ import os
 import docx
 import pytest
 
-from vocablens.document.word_writer import (
+from wordlens.document.word_writer import (
     BACKUP_DIR_NAME,
     DocumentError,
     DocumentLockedError,
     WordWriter,
     parse_entry,
 )
-from vocablens.vocabulary.deduplicator import Deduplicator
-from vocablens.vocabulary.models import VocabularyItem as V
+from wordlens.vocabulary.deduplicator import Deduplicator
+from wordlens.vocabulary.models import VocabularyItem as V
 
 
 def test_creates_document_and_folders(tmp_path):
@@ -128,7 +128,7 @@ def test_locked_document_keeps_entries_pending(tmp_path, monkeypatch):
     with pytest.raises(DocumentLockedError):
         w.add_entries([V("figure out", "averiguar")])
     assert w.pending_count == 1
-    assert not any(p.name.startswith("~vocablens") for p in tmp_path.iterdir())  # sin temporales
+    assert not any(p.name.startswith("~wordlens") for p in tmp_path.iterdir())  # sin temporales
 
     monkeypatch.setattr(os, "replace", real_replace)
     written = w.add_entries([])  # reintento
@@ -153,3 +153,33 @@ def test_deduplicator_roundtrip(tmp_path):
     assert d.add("Get at") is False
     items = d.filter_new([V("get at", "x"), V("make out", "y"), V("MAKE OUT", "z")])
     assert [i.expression for i in items] == ["make out"]
+
+
+def test_exclusive_lock_is_reported_as_locked_not_corrupt(tmp_path):
+    """Un bloqueo exclusivo real (como OneDrive o algunos editores) no debe
+    confundirse con un archivo corrupto ni perder las entradas."""
+    import ctypes
+
+    path = tmp_path / "v.docx"
+    w = WordWriter(path)
+    w.add_entries([V("figure out", "averiguar")])
+    k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    k32.CreateFileW.restype = ctypes.c_void_p
+    handle = k32.CreateFileW(str(path), 0x80000000, 0, None, 3, 0, None)  # sin compartir
+    try:
+        with pytest.raises(DocumentLockedError):
+            w.add_entries([V("get at", "insinuar")])
+        assert w.pending_count == 1
+    finally:
+        k32.CloseHandle(ctypes.c_void_p(handle))
+    assert [x.expression for x in w.add_entries([])] == ["get at"]
+    assert w.read_expressions() == ["figure out", "get at"]
+
+
+def test_corrupt_file_keeps_entries_pending(tmp_path):
+    path = tmp_path / "v.docx"
+    path.write_bytes(b"corrupto")
+    w = WordWriter(path)
+    with pytest.raises(DocumentError):
+        w.add_entries([V("figure out", "averiguar")])
+    assert w.pending_count == 1

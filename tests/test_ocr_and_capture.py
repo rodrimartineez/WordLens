@@ -4,14 +4,14 @@ import numpy as np
 import pytest
 from PIL import Image, ImageDraw, ImageFont
 
-from vocablens.capture.screen_capture import (
+from wordlens.capture.screen_capture import (
     ChangeDetector,
     ScreenCapturer,
     compute_bands,
     prepare_for_ocr,
 )
-from vocablens.capture.subtitle_detector import extract_subtitles
-from vocablens.ocr.ocr_engine import WindowsOcr
+from wordlens.capture.subtitle_detector import extract_subtitles
+from wordlens.ocr.ocr_engine import WindowsOcr
 
 W = 1920
 
@@ -102,18 +102,45 @@ def test_ocr_speed_is_reasonable(ocr):
 
 def test_compute_bands():
     mon = {"left": 0, "top": 0, "width": 1920, "height": 1080}
-    bands = compute_bands(mon, 0.25, 0.30, True, True)
-    assert [(b.name, b.top, b.height) for b in bands] == [("top", 0, 270), ("bottom", 756, 324)]
-    assert [b.name for b in compute_bands(mon, 0.25, 0.3, False, True)] == ["bottom"]
+    bands = compute_bands(mon, 0.33, 0.33, True, True)
+    # Tercio superior e inferior; el tercio central (y 356-724) no se captura.
+    assert [(b.name, b.top, b.height) for b in bands] == [("top", 0, 356), ("bottom", 724, 356)]
+    assert [b.name for b in compute_bands(mon, 0.33, 0.33, False, True)] == ["bottom"]
+    # Nunca se captura más de media pantalla por franja.
+    assert compute_bands(mon, 0.9, 0.9, True, True)[0].height == 540
 
 
-def test_real_screen_capture():
-    cap = ScreenCapturer(1, 0.25, 0.30)
+def test_real_screen_capture_uses_thirds():
+    from wordlens.config.settings import Settings
+
+    s = Settings()
+    cap = ScreenCapturer(1, s.top_band_fraction, s.bottom_band_fraction)
+    mon_h = cap.monitor["height"]
     shots = cap.grab()
     cap.close()
-    assert [s.band.name for s in shots] == ["top", "bottom"]
-    for s in shots:
-        assert s.image.size == (s.band.width, s.band.height)
+    assert [sh.band.name for sh in shots] == ["top", "bottom"]
+    for sh in shots:
+        assert sh.image.size == (sh.band.width, sh.band.height)
+        assert sh.band.height == int(mon_h * 0.33)
+    top, bottom = shots[0].band, shots[1].band
+    assert top.top == cap.monitor["top"]
+    assert bottom.top + bottom.height == cap.monitor["top"] + mon_h
+
+
+def test_subtitle_near_centre_is_read_in_enlarged_band(ocr):
+    """Un subtítulo al ~27 % de la altura queda fuera de la antigua franja superior
+    (25 %) pero dentro del nuevo tercio superior (33 %)."""
+    screen = background("noise", 1080)
+    draw(screen, ["I couldn't make out what she was saying."], int(1080 * 0.265), size=40)
+    mon = {"left": 0, "top": 0, "width": W, "height": 1080}
+    old = compute_bands(mon, 0.25, 0.30, True, False)[0]
+    new = compute_bands(mon, 0.33, 0.33, True, False)[0]
+
+    def crop(b):
+        return screen.crop((b.left, b.top, b.left + b.width, b.top + b.height))
+
+    assert read(ocr, crop(old)) == []
+    assert read(ocr, crop(new)) == ["I couldn't make out what she was saying."]
 
 
 def test_change_detector():

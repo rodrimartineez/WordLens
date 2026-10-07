@@ -1,4 +1,4 @@
-﻿# Instalador de VocabLens. Ejecutar desde la carpeta del proyecto:
+﻿# Instalador de WordLens. Ejecutar desde la carpeta del proyecto:
 #   powershell -ExecutionPolicy Bypass -File install.ps1
 # Es seguro ejecutarlo varias veces.
 
@@ -37,7 +37,7 @@ if ($LASTEXITCODE -ne 0) { Fail "Falló la instalación de paquetes"; exit 1 }
 Ok "Paquetes instalados"
 
 Step "OCR de Windows (inglés)"
-$langs = & .\.venv\Scripts\python.exe -c "from vocablens.ocr.ocr_engine import available_languages as a; print(','.join(a()))"
+$langs = & .\.venv\Scripts\python.exe -c "from wordlens.ocr.ocr_engine import available_languages as a; print(','.join(a()))"
 if ($langs -match "en-") {
     Ok "Idiomas OCR: $langs"
 } else {
@@ -55,7 +55,7 @@ if (-not $ollama) {
     exit 1
 }
 Ok "Ollama: $(& ollama --version)"
-$model = & .\.venv\Scripts\python.exe -c "from vocablens.config.settings import load_settings; print(load_settings().ollama_model)"
+$model = & .\.venv\Scripts\python.exe -c "from wordlens.config.settings import load_settings; print(load_settings().ollama_model)"
 $list = & ollama list 2>$null
 if ($LASTEXITCODE -ne 0) {
     Warn "Ollama no responde. Ábrelo desde el menú Inicio y vuelve a ejecutar el instalador."
@@ -72,4 +72,4 @@ if ($list -match [regex]::Escape($model)) {
 
 Step "Diagnóstico"
 & .\.venv\Scripts\python.exe tools\diagnose.py
-Write-Host "`nListo. Inicia la aplicación con start_vocablens.bat" -ForegroundColor Green
+Write-Host "`nListo. Inicia la aplicación con start_wordlens.bat" -ForegroundColor Green

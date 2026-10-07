@@ -5,7 +5,7 @@ __pycache__/
 logs/
 config.json
 *.json.tmp
-~vocablens_*
+~wordlens_*
 *.docx
-.vocablens_backups/
+.wordlens_backups/
 *.pendientes.txt

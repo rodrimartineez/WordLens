@@ -5,9 +5,9 @@ from __future__ import annotations
 import logging
 import time
 
-from vocablens.config.settings import Settings
-from vocablens.vocabulary.extractor import is_trivial_line, parse_llm_json, validate_item
-from vocablens.vocabulary.models import VocabularyItem
+from wordlens.config.settings import Settings
+from wordlens.vocabulary.extractor import is_trivial_line, parse_llm_json, validate_item
+from wordlens.vocabulary.models import VocabularyItem
 
 from .ollama_client import OllamaClient
 from .prompts import RESPONSE_SCHEMA, build_messages

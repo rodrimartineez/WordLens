@@ -46,9 +46,9 @@ def check_python():
 def check_ocr(settings):
     from PIL import Image, ImageDraw, ImageFont
 
-    from vocablens.capture.screen_capture import prepare_for_ocr
-    from vocablens.capture.subtitle_detector import extract_subtitles
-    from vocablens.ocr.ocr_engine import WindowsOcr, available_languages
+    from wordlens.capture.screen_capture import prepare_for_ocr
+    from wordlens.capture.subtitle_detector import extract_subtitles
+    from wordlens.ocr.ocr_engine import WindowsOcr, available_languages
 
     langs = available_languages()
     print(f"{OK} Idiomas OCR instalados: {langs}")
@@ -74,7 +74,7 @@ def check_ocr(settings):
 
 @check("Captura de pantalla")
 def check_capture(settings):
-    from vocablens.capture.screen_capture import ScreenCapturer, enable_dpi_awareness
+    from wordlens.capture.screen_capture import ScreenCapturer, enable_dpi_awareness
 
     enable_dpi_awareness()
     cap = ScreenCapturer(settings.monitor, settings.top_band_fraction, settings.bottom_band_fraction)
@@ -91,8 +91,8 @@ def check_capture(settings):
 
 @check("Ollama y modelo")
 def check_ollama(settings, skip_llm: bool):
-    from vocablens.ai.ollama_client import OllamaClient
-    from vocablens.ai.vocabulary_analyzer import VocabularyAnalyzer
+    from wordlens.ai.ollama_client import OllamaClient
+    from wordlens.ai.vocabulary_analyzer import VocabularyAnalyzer
 
     client = OllamaClient(settings.ollama_url, settings.ollama_timeout_seconds)
     print(f"{OK} Ollama {client.version()} en {settings.ollama_url}")
@@ -114,8 +114,8 @@ def check_ollama(settings, skip_llm: bool):
 
 @check("Documento Word (en carpeta temporal)")
 def check_document():
-    from vocablens.document.word_writer import WordWriter
-    from vocablens.vocabulary.models import VocabularyItem
+    from wordlens.document.word_writer import WordWriter
+    from wordlens.vocabulary.models import VocabularyItem
 
     with tempfile.TemporaryDirectory() as tmp:
         w = WordWriter(Path(tmp) / "prueba.docx")
@@ -132,7 +132,7 @@ def check_document():
 
 @check("Atajos globales")
 def check_hotkeys(settings):
-    from vocablens.input.hotkeys import parse_hotkey, user32
+    from wordlens.input.hotkeys import parse_hotkey, user32
 
     for spec in (settings.hotkey_start, settings.hotkey_stop):
         mods, vk = parse_hotkey(spec)
@@ -140,7 +140,7 @@ def check_hotkeys(settings):
             user32.UnregisterHotKey(None, 0x7F00)
             print(f"{OK} {spec} disponible")
         else:
-            print(f"{WARN} {spec} no disponible (¿VocabLens ya en marcha u otra app lo usa?)")
+            print(f"{WARN} {spec} no disponible (¿WordLens ya en marcha u otra app lo usa?)")
 
 
 def main() -> int:
@@ -148,7 +148,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--skip-llm", action="store_true")
     args = parser.parse_args()
-    from vocablens.config.settings import load_settings
+    from wordlens.config.settings import load_settings
 
     settings = load_settings()
     print(f"Configuración: modelo={settings.ollama_model} documento={settings.document}")

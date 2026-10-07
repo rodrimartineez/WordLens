@@ -1,6 +1,6 @@
-"""VocabLens — punto de entrada.
+"""WordLens — punto de entrada.
 
-Uso habitual (sin consola):   start_vocablens.bat
+Uso habitual (sin consola):   start_wordlens.bat
 Con consola para ver qué pasa: .venv\\Scripts\\python.exe main.py
 """
 
@@ -16,13 +16,13 @@ import time
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-from vocablens.config.settings import DEFAULT_CONFIG_PATH, LOG_DIR, load_settings
+from wordlens.config.settings import DEFAULT_CONFIG_PATH, LOG_DIR, load_settings
 
 
 def setup_logging(verbose: bool) -> None:
     LOG_DIR.mkdir(exist_ok=True)
     handlers: list[logging.Handler] = [
-        RotatingFileHandler(LOG_DIR / "vocablens.log", maxBytes=2_000_000, backupCount=3, encoding="utf-8")
+        RotatingFileHandler(LOG_DIR / "wordlens.log", maxBytes=2_000_000, backupCount=3, encoding="utf-8")
     ]
     if sys.stdout is not None:  # con pythonw.exe no hay consola
         try:
@@ -40,14 +40,14 @@ def setup_logging(verbose: bool) -> None:
 def acquire_single_instance() -> object | None:
     """Evita dos instancias (competirían por los atajos y el documento)."""
     kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
-    handle = kernel32.CreateMutexW(None, False, "Local\\VocabLens_single_instance")
+    handle = kernel32.CreateMutexW(None, False, "Local\\WordLens_single_instance")
     if ctypes.get_last_error() == 183:  # ERROR_ALREADY_EXISTS
         return None
     return handle
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="VocabLens: vocabulario B2-C1 desde subtítulos")
+    parser = argparse.ArgumentParser(description="WordLens: vocabulario B2-C1 desde subtítulos")
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG_PATH, help="Ruta de config.json")
     parser.add_argument("--document", help="Documento Word de destino (sustituye al de la configuración)")
     parser.add_argument("--start", action="store_true", help="Empezar a capturar inmediatamente")
@@ -57,14 +57,14 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     setup_logging(args.verbose)
-    log = logging.getLogger("vocablens")
+    log = logging.getLogger("wordlens")
 
     mutex = acquire_single_instance()
     if mutex is None:
-        log.error("VocabLens ya se está ejecutando (mira el icono junto al reloj).")
+        log.error("WordLens ya se está ejecutando (mira el icono junto al reloj).")
         ctypes.windll.user32.MessageBoxW(
-            None, "VocabLens ya se está ejecutando.\nBusca su icono en la bandeja del sistema.",
-            "VocabLens", 0x40,
+            None, "WordLens ya se está ejecutando.\nBusca su icono en la bandeja del sistema.",
+            "WordLens", 0x40,
         )
         return 1
 
@@ -72,11 +72,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.document:
         settings.document_path = args.document
 
-    from vocablens.app import VocabLensApp
-    from vocablens.input.hotkeys import HotkeyManager
+    from wordlens.app import WordLensApp
+    from wordlens.input.hotkeys import HotkeyManager
 
-    app = VocabLensApp(settings)
-    log.info("VocabLens iniciado. Modelo: %s | Documento: %s", settings.ollama_model, settings.document)
+    app = WordLensApp(settings)
+    log.info("WordLens iniciado. Modelo: %s | Documento: %s", settings.ollama_model, settings.document)
 
     hotkeys = HotkeyManager()
     hotkeys.add(settings.hotkey_start, lambda: threading.Thread(target=app.start, daemon=True).start())
@@ -115,7 +115,7 @@ def main(argv: list[str] | None = None) -> int:
                 pass
             app.shutdown()
         else:
-            from vocablens.ui.tray import TrayUI
+            from wordlens.ui.tray import TrayUI
 
             tray = TrayUI(app)
 
@@ -135,7 +135,7 @@ def main(argv: list[str] | None = None) -> int:
     finally:
         hotkeys.stop()
         app.shutdown()
-        log.info("VocabLens cerrado")
+        log.info("WordLens cerrado")
     return 0
 
 

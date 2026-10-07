@@ -64,8 +64,8 @@ class ScreenCapturer:
     def __init__(
         self,
         monitor_index: int = 1,
-        top_fraction: float = 0.25,
-        bottom_fraction: float = 0.30,
+        top_fraction: float = 0.33,
+        bottom_fraction: float = 0.33,
         scan_top: bool = True,
         scan_bottom: bool = True,
     ) -> None:

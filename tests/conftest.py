@@ -8,8 +8,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 def _ollama_ready() -> bool:
     try:
-        from vocablens.ai.ollama_client import OllamaClient
-        from vocablens.config.settings import Settings
+        from wordlens.ai.ollama_client import OllamaClient
+        from wordlens.config.settings import Settings
 
         return OllamaClient(timeout=3).has_model(Settings().ollama_model)
     except Exception:

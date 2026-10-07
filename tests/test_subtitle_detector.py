@@ -1,11 +1,11 @@
-from vocablens.capture.subtitle_detector import (
+from wordlens.capture.subtitle_detector import (
     SubtitleTracker,
     clean_ocr_text,
     extract_subtitles,
     group_lines,
     looks_like_subtitle,
 )
-from vocablens.ocr.ocr_engine import OcrLine
+from wordlens.ocr.ocr_engine import OcrLine
 
 
 class Clock:

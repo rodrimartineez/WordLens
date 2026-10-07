@@ -18,10 +18,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from vocablens.ai.vocabulary_analyzer import VocabularyAnalyzer  # noqa: E402
-from vocablens.config.settings import load_settings  # noqa: E402
-from vocablens.document.word_writer import WordWriter  # noqa: E402
-from vocablens.vocabulary.deduplicator import Deduplicator  # noqa: E402
+from wordlens.ai.vocabulary_analyzer import VocabularyAnalyzer  # noqa: E402
+from wordlens.config.settings import load_settings  # noqa: E402
+from wordlens.document.word_writer import WordWriter  # noqa: E402
+from wordlens.vocabulary.deduplicator import Deduplicator  # noqa: E402
 
 SAMPLES = [
     "I couldn't figure out what he was getting at.",

@@ -9,9 +9,9 @@ import json
 
 import pytest
 
-from vocablens.ai.prompts import build_messages
-from vocablens.ai.vocabulary_analyzer import VocabularyAnalyzer
-from vocablens.config.settings import Settings
+from wordlens.ai.prompts import build_messages
+from wordlens.ai.vocabulary_analyzer import VocabularyAnalyzer
+from wordlens.config.settings import Settings
 
 
 class CannedClient:
