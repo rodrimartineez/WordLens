@@ -407,3 +407,5 @@ WordLens/
 ## Actualizar desde VocabLens
 
 El proyecto se llamaba antes **VocabLens**. Al arrancar, WordLens actualiza automáticamente un `config.json` antiguo: cambia el nombre de la aplicación, mueve la ruta del documento a la carpeta del proyecto (si apuntaba a `Documentos\VocabLens\` o a la antigua carpeta del proyecto) y amplía las franjas de captura antiguas (25 %/30 %) a los nuevos tercios. Los valores que hayas personalizado se respetan. El lanzador ahora es `start_wordlens.bat`.
+#   W o r d L e n s  
+ 

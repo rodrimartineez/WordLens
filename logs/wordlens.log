@@ -1,0 +1,159 @@
+2026-10-07 14:36:31,929 INFO    [MainThread] wordlens: WordLens iniciado. Modelo: maternion/ling-3.0-tiny:8b | Documento: C:\Documentos\Proyectos\WordLens\Vocabulario.docx
+2026-10-07 14:36:31,930 INFO    [hotkeys] wordlens.input.hotkeys: Atajo registrado: ctrl+shift+v
+2026-10-07 14:36:31,930 INFO    [hotkeys] wordlens.input.hotkeys: Atajo registrado: ctrl+shift+x
+2026-10-07 14:36:33,182 INFO    [Thread-1 (_after_tray_ready)] wordlens.app: Aviso: Listo. Pulsa ctrl+shift+v para empezar a capturar y ctrl+shift+x para detener.
+2026-10-07 14:36:35,329 INFO    [Thread-3 (start)] wordlens.document.word_writer: Documento creado: C:\Documentos\Proyectos\WordLens\Vocabulario.docx
+2026-10-07 14:36:37,427 INFO    [Thread-3 (start)] wordlens.state: Estado: INACTIVE -> CAPTURING
+2026-10-07 14:36:37,440 INFO    [Thread-3 (start)] wordlens.app: Aviso: Capturando. 0 expresiones ya registradas en Vocabulario.docx.
+2026-10-07 14:36:38,571 INFO    [capture] wordlens.app: Captura iniciada: [('top', 1920, 356), ('bottom', 1920, 356)]
+2026-10-07 14:36:39,519 INFO    [analyzer] wordlens.app: Modelo maternion/ling-3.0-tiny:8b cargado
+2026-10-07 14:36:41,303 INFO    [Thread-4 (stop)] wordlens.state: Estado: CAPTURING -> STOPPED
+2026-10-07 14:36:41,304 INFO    [capture] wordlens.app: Captura finalizada (6 capturas, 2 OCR)
+2026-10-07 14:36:41,542 INFO    [Thread-4 (stop)] wordlens.app: Aviso: Detenido. 0 expresiones nuevas en esta sesión.
+2026-10-07 14:36:46,389 INFO    [Thread-5 (start)] wordlens.state: Estado: STOPPED -> CAPTURING
+2026-10-07 14:36:46,401 INFO    [Thread-5 (start)] wordlens.app: Aviso: Capturando. 0 expresiones ya registradas en Vocabulario.docx.
+2026-10-07 14:36:46,403 INFO    [capture] wordlens.app: Captura iniciada: [('top', 1920, 356), ('bottom', 1920, 356)]
+2026-10-07 14:36:48,464 INFO    [analyzer] wordlens.app: Modelo maternion/ling-3.0-tiny:8b cargado
+2026-10-07 14:36:50,308 INFO    [Thread-6 (stop)] wordlens.state: Estado: CAPTURING -> STOPPED
+2026-10-07 14:36:50,310 INFO    [capture] wordlens.app: Captura finalizada (8 capturas, 2 OCR)
+2026-10-07 14:36:50,510 INFO    [Thread-6 (stop)] wordlens.app: Aviso: Detenido. 0 expresiones nuevas en esta sesión.
+2026-10-07 14:36:55,413 INFO    [Thread-7 (start)] wordlens.state: Estado: STOPPED -> CAPTURING
+2026-10-07 14:36:55,423 INFO    [Thread-7 (start)] wordlens.app: Aviso: Capturando. 0 expresiones ya registradas en Vocabulario.docx.
+2026-10-07 14:36:55,425 INFO    [capture] wordlens.app: Captura iniciada: [('top', 1920, 356), ('bottom', 1920, 356)]
+2026-10-07 14:36:57,313 INFO    [Thread-8 (start)] wordlens.app: Ya hay una sesión activa; se ignora el inicio
+2026-10-07 14:36:57,492 INFO    [analyzer] wordlens.app: Modelo maternion/ling-3.0-tiny:8b cargado
+2026-10-07 14:36:59,315 INFO    [Thread-9 (stop)] wordlens.state: Estado: CAPTURING -> STOPPED
+2026-10-07 14:36:59,316 INFO    [capture] wordlens.app: Captura finalizada (8 capturas, 2 OCR)
+2026-10-07 14:36:59,525 INFO    [Thread-9 (stop)] wordlens.app: Aviso: Detenido. 0 expresiones nuevas en esta sesión.
+2026-10-07 14:42:33,051 INFO    [MainThread] wordlens: WordLens iniciado. Modelo: maternion/ling-3.0-tiny:8b | Documento: C:\Documentos\Proyectos\WordLens\Vocabulario.docx
+2026-10-07 14:42:33,052 INFO    [hotkeys] wordlens.input.hotkeys: Atajo registrado: ctrl+shift+v
+2026-10-07 14:42:33,052 INFO    [hotkeys] wordlens.input.hotkeys: Atajo registrado: ctrl+shift+x
+2026-10-07 14:42:34,165 INFO    [Thread-1 (_after_tray_ready)] wordlens.app: Aviso: Listo. Pulsa ctrl+shift+v para empezar a capturar y ctrl+shift+x para detener.
+2026-10-07 14:42:36,658 INFO    [Thread-3 (start)] wordlens.document.word_writer: Documento creado: C:\Documentos\Proyectos\WordLens\Vocabulario.docx
+2026-10-07 14:42:38,758 INFO    [Thread-3 (start)] wordlens.state: Estado: INACTIVE -> CAPTURING
+2026-10-07 14:42:38,770 INFO    [Thread-3 (start)] wordlens.app: Aviso: Capturando. 0 expresiones ya registradas en Vocabulario.docx.
+2026-10-07 14:42:39,225 INFO    [capture] wordlens.app: Captura iniciada: [('top', 1920, 356), ('bottom', 1920, 356)]
+2026-10-07 14:42:40,829 INFO    [analyzer] wordlens.app: Modelo maternion/ling-3.0-tiny:8b cargado
+2026-10-07 14:43:07,164 INFO    [capture] wordlens.app: Subtítulo nuevo: But go ask my landlady, Mrs. Conroy.
+2026-10-07 14:43:08,673 INFO    [analyzer] wordlens.state: Estado: CAPTURING -> PROCESSING
+2026-10-07 14:43:10,732 INFO    [capture] wordlens.app: Subtítulo nuevo: She may be 98 years old, but she still...
+2026-10-07 14:43:11,678 INFO    [analyzer] wordlens.ai.vocabulary_analyzer: LLM 3.0s para 1 línea(s): {"items":[{"line":1,"expression":"go ask","translation":"preguntar / preguntar por"}]}
+2026-10-07 14:43:11,701 INFO    [analyzer] wordlens.app: AÑADIDO: go ask — preguntar / preguntar por   [But go ask my landlady, Mrs. Conroy.]
+2026-10-07 14:43:11,714 INFO    [analyzer] wordlens.state: Estado: PROCESSING -> CAPTURING
+2026-10-07 14:43:13,246 INFO    [analyzer] wordlens.state: Estado: CAPTURING -> PROCESSING
+2026-10-07 14:43:14,309 INFO    [capture] wordlens.app: Subtítulo nuevo: She's dead, isn't she?
+2026-10-07 14:43:15,844 INFO    [capture] wordlens.app: Subtítulo nuevo: Never even saw the bus.
+2026-10-07 14:43:16,376 INFO    [analyzer] wordlens.ai.vocabulary_analyzer: LLM 3.1s para 1 línea(s): {"items":[{"line":1,"expression":"still","translation":"aún / todavía"}]}
+2026-10-07 14:43:16,377 INFO    [analyzer] wordlens.vocabulary.extractor: Descartado 'still' (palabra demasiado básica)
+2026-10-07 14:43:16,377 INFO    [analyzer] wordlens.state: Estado: PROCESSING -> CAPTURING
+2026-10-07 14:43:17,903 INFO    [analyzer] wordlens.state: Estado: CAPTURING -> PROCESSING
+2026-10-07 14:43:17,913 INFO    [analyzer] wordlens.ai.vocabulary_analyzer: Líneas triviales omitidas: ["She's dead, isn't she?"]
+2026-10-07 14:43:19,420 INFO    [capture] wordlens.app: Subtítulo nuevo: My apartment is a Chinese restaurant.
+2026-10-07 14:43:21,098 INFO    [analyzer] wordlens.ai.vocabulary_analyzer: LLM 3.2s para 1 línea(s): {"items":[{"line":1,"expression":"never even saw","translation":"nunca vi / no vi en absoluto"}]}
+2026-10-07 14:43:21,117 INFO    [analyzer] wordlens.app: AÑADIDO: never even saw — nunca vi / no vi en absoluto   [Never even saw the bus.]
+2026-10-07 14:43:21,129 INFO    [analyzer] wordlens.state: Estado: PROCESSING -> CAPTURING
+2026-10-07 14:43:22,664 INFO    [analyzer] wordlens.state: Estado: CAPTURING -> PROCESSING
+2026-10-07 14:43:23,000 INFO    [capture] wordlens.app: Subtítulo nuevo: What am I gonna do? Come live with us.
+2026-10-07 14:43:25,812 INFO    [analyzer] wordlens.ai.vocabulary_analyzer: LLM 3.1s para 1 línea(s): {"items":[{"line":1,"expression":"Chinese restaurant","translation":"restaurante chino / restaurante chino"}]}
+2026-10-07 14:43:25,833 INFO    [analyzer] wordlens.app: AÑADIDO: chinese restaurant — restaurante chino   [My apartment is a Chinese restaurant.]
+2026-10-07 14:43:25,843 INFO    [analyzer] wordlens.state: Estado: PROCESSING -> CAPTURING
+2026-10-07 14:43:26,572 INFO    [capture] wordlens.app: Subtítulo nuevo: Of course
+2026-10-07 14:43:27,366 INFO    [analyzer] wordlens.state: Estado: CAPTURING -> PROCESSING
+2026-10-07 14:43:27,380 INFO    [analyzer] wordlens.ai.vocabulary_analyzer: Líneas triviales omitidas: ['Of course']
+2026-10-07 14:43:28,616 INFO    [capture] wordlens.app: Subtítulo nuevo: You sure about this, Ted?
+2026-10-07 14:43:30,677 INFO    [analyzer] wordlens.ai.vocabulary_analyzer: LLM 3.3s para 1 línea(s): {"items":[{"line":1,"expression":"what am I gonna do","translation":"qué voy a hacer / qué hago"]}]
+2026-10-07 14:43:30,678 WARNING [analyzer] wordlens.vocabulary.extractor: Respuesta del LLM no es JSON válido: '{"items":[{"line":1,"expression":"what am I gonna do","translation":"qué voy a hacer / qué hago"]}]'
+2026-10-07 14:43:30,678 INFO    [analyzer] wordlens.state: Estado: PROCESSING -> CAPTURING
+2026-10-07 14:43:30,683 INFO    [capture] wordlens.app: Subtítulo nuevo: I mean, you basically live here anyway. It's not like it'Il change anything.
+2026-10-07 14:43:32,206 INFO    [analyzer] wordlens.state: Estado: CAPTURING -> PROCESSING
+2026-10-07 14:43:34,219 INFO    [capture] wordlens.app: Subtítulo nuevo: No, it's like it'Il change everything!
+2026-10-07 14:43:35,645 INFO    [analyzer] wordlens.ai.vocabulary_analyzer: LLM 3.4s para 2 línea(s): {"items":[{"line":1,"expression":"sure about this","translation":"seguro de esto / estar seguro de esto"},{"line":2,"expression":"basically","translation":"en general / básicamente"}]}
+2026-10-07 14:43:35,646 INFO    [analyzer] wordlens.vocabulary.extractor: Descartado 'basically' (palabra demasiado básica)
+2026-10-07 14:43:35,665 INFO    [analyzer] wordlens.app: AÑADIDO: sure about this — seguro de esto / estar seguro de esto   [You sure about this, Ted?]
+2026-10-07 14:43:35,677 INFO    [analyzer] wordlens.state: Estado: PROCESSING -> CAPTURING
+2026-10-07 14:43:37,207 INFO    [analyzer] wordlens.state: Estado: CAPTURING -> PROCESSING
+2026-10-07 14:43:37,277 INFO    [capture] wordlens.app: Subtítulo nuevo: Oh, Ted! You are so screwed.
+2026-10-07 14:43:39,387 INFO    [capture] wordlens.app: Subtítulo nuevo: What are you talking about? And why is that girl checking you out?
+2026-10-07 14:43:40,563 INFO    [analyzer] wordlens.ai.vocabulary_analyzer: LLM 3.3s para 1 línea(s): {"items":[{"line":1,"expression":"it'll change everything","translation":"cambiarlo todo / transformarlo todo"}]}
+2026-10-07 14:43:40,563 INFO    [analyzer] wordlens.vocabulary.extractor: Descartado "it'll change everything" (no aparece en el subtítulo)
+2026-10-07 14:43:40,563 INFO    [analyzer] wordlens.state: Estado: PROCESSING -> CAPTURING
+2026-10-07 14:43:42,104 INFO    [analyzer] wordlens.state: Estado: CAPTURING -> PROCESSING
+2026-10-07 14:43:45,463 INFO    [analyzer] wordlens.ai.vocabulary_analyzer: LLM 3.3s para 2 línea(s): {"items":[{"line":1,"expression":"screw","translation":"arruinar / estropear"},{"line":2,"expression":"check out","translation":"mirar / fijarse en"}]}
+2026-10-07 14:43:45,488 INFO    [analyzer] wordlens.app: Aviso: No puedo guardar: cierra el documento en Word (las expresiones quedan en espera).
+2026-10-07 14:43:45,504 INFO    [analyzer] wordlens.state: Estado: PROCESSING -> CAPTURING
+2026-10-07 14:43:46,045 INFO    [analyzer] wordlens.app: Aviso: No puedo guardar: cierra el documento en Word (las expresiones quedan en espera).
+2026-10-07 14:43:50,548 INFO    [capture] wordlens.app: Subtítulo nuevo: Because I look good.
+2026-10-07 14:43:52,058 INFO    [analyzer] wordlens.state: Estado: CAPTURING -> PROCESSING
+2026-10-07 14:43:52,074 INFO    [analyzer] wordlens.ai.vocabulary_analyzer: Líneas triviales omitidas: ['Because I look good.']
+2026-10-07 14:43:52,092 INFO    [analyzer] wordlens.app: Aviso: No puedo guardar: cierra el documento en Word (las expresiones quedan en espera).
+2026-10-07 14:43:52,092 INFO    [analyzer] wordlens.state: Estado: PROCESSING -> CAPTURING
+2026-10-07 14:43:53,106 INFO    [capture] wordlens.app: Subtítulo nuevo: BARNEY: Now focus. You and Marshall are roommates.
+2026-10-07 14:43:54,612 INFO    [analyzer] wordlens.state: Estado: CAPTURING -> PROCESSING
+2026-10-07 14:43:55,648 INFO    [capture] wordlens.app: Subtítulo nuevo: You have an amazing apartment. Marshall and Lily just got engaged.
+2026-10-07 14:43:57,614 INFO    [analyzer] wordlens.ai.vocabulary_analyzer: LLM 3.0s para 1 línea(s): {"items":[{"line":1,"expression":"focus","translation":"enfocarse / concentrarse"}]}
+2026-10-07 14:43:57,614 INFO    [analyzer] wordlens.vocabulary.extractor: Descartado 'focus' (palabra demasiado básica)
+2026-10-07 14:43:57,630 INFO    [analyzer] wordlens.app: Aviso: No puedo guardar: cierra el documento en Word (las expresiones quedan en espera).
+2026-10-07 14:43:57,630 INFO    [analyzer] wordlens.state: Estado: PROCESSING -> CAPTURING
+2026-10-07 14:43:59,152 INFO    [analyzer] wordlens.state: Estado: CAPTURING -> PROCESSING
+2026-10-07 14:43:59,228 INFO    [capture] wordlens.app: Subtítulo nuevo: Yeah. so?
+2026-10-07 14:44:00,237 INFO    [capture] wordlens.app: Subtítulo nuevo: So, you're not still gonna be his roommate when he gets married, are you?
+2026-10-07 14:44:02,357 INFO    [analyzer] wordlens.ai.vocabulary_analyzer: LLM 3.2s para 1 línea(s): {"items":[{"line":1,"expression":"get engaged","translation":"casarse"}]}
+2026-10-07 14:44:02,412 INFO    [analyzer] wordlens.app: Aviso: No puedo guardar: cierra el documento en Word (las expresiones quedan en espera).
+2026-10-07 14:44:02,413 INFO    [analyzer] wordlens.state: Estado: PROCESSING -> CAPTURING
+2026-10-07 14:44:03,311 INFO    [capture] wordlens.app: Subtítulo nuevo: Someone's going to move out. So, who's it going to be?
+2026-10-07 14:44:03,957 INFO    [analyzer] wordlens.state: Estado: CAPTURING -> PROCESSING
+2026-10-07 14:44:03,970 INFO    [analyzer] wordlens.ai.vocabulary_analyzer: Líneas triviales omitidas: ['Yeah. so?']
+2026-10-07 14:44:05,850 INFO    [capture] wordlens.app: Subtítulo nuevo: Come on, Barney, I'm sure they've talked about who gets the apartment.
+2026-10-07 14:44:07,651 INFO    [analyzer] wordlens.ai.vocabulary_analyzer: LLM 3.7s para 2 línea(s): {"items":[{"line":1,"expression":"roommate","translation":"compañero de piso / compañero de vivienda"},{"line":2,"expression":"move out","translation":"mudarse / irse de la casa"}]}
+2026-10-07 14:44:07,677 INFO    [analyzer] wordlens.app: Aviso: No puedo guardar: cierra el documento en Word (las expresiones quedan en espera).
+2026-10-07 14:44:07,678 INFO    [analyzer] wordlens.state: Estado: PROCESSING -> CAPTURING
+2026-10-07 14:44:08,388 INFO    [capture] wordlens.app: Subtítulo nuevo: You've talked about who gets the apartment, right?
+2026-10-07 14:44:09,214 INFO    [analyzer] wordlens.state: Estado: CAPTURING -> PROCESSING
+2026-10-07 14:44:10,428 INFO    [capture] wordlens.app: Subtítulo nuevo: Yeah, we've talked about it.
+2026-10-07 14:44:12,505 INFO    [capture] wordlens.app: Subtítulo nuevo: So, when Lily and I get married,
+2026-10-07 14:44:12,532 INFO    [analyzer] wordlens.ai.vocabulary_analyzer: LLM 3.3s para 2 línea(s): {"items":[{"line":1,"expression":"come on","translation":"vamos / adelante"},{"line":1,"expression":"who gets the apartment","translation":"a quién le toca el apartamento"}]}
+2026-10-07 14:44:12,532 INFO    [analyzer] wordlens.vocabulary.extractor: Descartado 'who gets the apartment' (parece una frase completa)
+2026-10-07 14:44:12,555 INFO    [analyzer] wordlens.app: AÑADIDO: screw — arruinar / estropear   [Oh, Ted! You are so screwed.]
+2026-10-07 14:44:12,555 INFO    [analyzer] wordlens.app: AÑADIDO: check out — mirar / fijarse en   [What are you talking about? And why is that girl checking you out?]
+2026-10-07 14:44:12,555 INFO    [analyzer] wordlens.app: AÑADIDO: get engaged — casarse   [You have an amazing apartment. Marshall and Lily just got engaged.]
+2026-10-07 14:44:12,555 INFO    [analyzer] wordlens.app: AÑADIDO: roommate — compañero de piso / compañero de vivienda   [So, you're not still gonna be his roommate when he gets married, are you?]
+2026-10-07 14:44:12,555 INFO    [analyzer] wordlens.app: AÑADIDO: move out — mudarse / irse de la casa   [Someone's going to move out. So, who's it going to be?]
+2026-10-07 14:44:12,555 INFO    [analyzer] wordlens.app: AÑADIDO: come on — vamos / adelante   [Come on, Barney, I'm sure they've talked about who gets the apartment.]
+2026-10-07 14:44:12,570 INFO    [analyzer] wordlens.state: Estado: PROCESSING -> CAPTURING
+2026-10-07 14:44:14,103 INFO    [analyzer] wordlens.state: Estado: CAPTURING -> PROCESSING
+2026-10-07 14:44:16,059 INFO    [capture] wordlens.app: Subtítulo nuevo: who's gonna get the apartment? That's a tough one.
+2026-10-07 14:44:17,449 INFO    [analyzer] wordlens.ai.vocabulary_analyzer: LLM 3.3s para 2 línea(s): {"items":[{"line":1,"expression":"talked about it","translation":"hablar sobre ello"}]}
+2026-10-07 14:44:17,475 INFO    [analyzer] wordlens.app: Aviso: No puedo guardar: cierra el documento en Word (las expresiones quedan en espera).
+2026-10-07 14:44:17,475 INFO    [analyzer] wordlens.state: Estado: PROCESSING -> CAPTURING
+2026-10-07 14:44:19,004 INFO    [analyzer] wordlens.state: Estado: CAPTURING -> PROCESSING
+2026-10-07 14:44:21,160 INFO    [capture] wordlens.app: Subtítulo nuevo: You know who I think could handle a problem like that?
+2026-10-07 14:44:22,240 INFO    [analyzer] wordlens.ai.vocabulary_analyzer: LLM 3.2s para 1 línea(s): {"items":[{"line":1,"expression":"tough one","translation":"una opción difícil / un reto"}]}
+2026-10-07 14:44:22,269 INFO    [analyzer] wordlens.app: Aviso: No puedo guardar: cierra el documento en Word (las expresiones quedan en espera).
+2026-10-07 14:44:22,269 INFO    [analyzer] wordlens.state: Estado: PROCESSING -> CAPTURING
+2026-10-07 14:44:23,802 INFO    [analyzer] wordlens.state: Estado: CAPTURING -> PROCESSING
+2026-10-07 14:44:24,220 INFO    [capture] wordlens.app: Subtítulo nuevo: Future Ted and Future Marshall.
+2026-10-07 14:44:26,960 INFO    [analyzer] wordlens.ai.vocabulary_analyzer: LLM 3.1s para 1 línea(s): {"items":[{"line":1,"expression":"handle a problem","translation":"resolver un problema"}]}
+2026-10-07 14:44:26,981 INFO    [analyzer] wordlens.app: AÑADIDO: talk about it — hablar sobre ello   [Yeah, we've talked about it.]
+2026-10-07 14:44:26,981 INFO    [analyzer] wordlens.app: AÑADIDO: tough one — una opción difícil / un reto   [who's gonna get the apartment? That's a tough one.]
+2026-10-07 14:44:26,981 INFO    [analyzer] wordlens.app: AÑADIDO: handle a problem — resolver un problema   [You know who I think could handle a problem like that?]
+2026-10-07 14:44:26,991 INFO    [analyzer] wordlens.state: Estado: PROCESSING -> CAPTURING
+2026-10-07 14:44:28,521 INFO    [analyzer] wordlens.state: Estado: CAPTURING -> PROCESSING
+2026-10-07 14:44:29,343 INFO    [capture] wordlens.app: Subtítulo nuevo: Totally. Let's let those guys handle it.
+2026-10-07 14:44:31,689 INFO    [analyzer] wordlens.ai.vocabulary_analyzer: LLM 3.2s para 1 línea(s): {"items":[{"line":1,"expression":"future Ted and future Marshall","translation":"el futuro Ted y el futuro Marshall"}]}
+2026-10-07 14:44:31,711 INFO    [analyzer] wordlens.app: AÑADIDO: future ted and future marshall — el futuro Ted y el futuro Marshall   [Future Ted and Future Marshall.]
+2026-10-07 14:44:31,723 INFO    [analyzer] wordlens.state: Estado: PROCESSING -> CAPTURING
+2026-10-07 14:44:32,912 INFO    [capture] wordlens.app: Subtítulo nuevo: Damn it, Past Ted!
+2026-10-07 14:44:33,254 INFO    [analyzer] wordlens.state: Estado: CAPTURING -> PROCESSING
+2026-10-07 14:44:35,477 INFO    [capture] wordlens.app: Subtítulo nuevo: You blew it, dude.
+2026-10-07 14:44:37,101 INFO    [analyzer] wordlens.ai.vocabulary_analyzer: LLM 3.8s para 2 línea(s): {"items":[{"line":1,"expression":"let's let",translation":"dejar que / dejar pasar"},{"line":2,"expression":"Damn it",translation":"Joder / Madre de Dios"}]}
+2026-10-07 14:44:37,102 WARNING [analyzer] wordlens.vocabulary.extractor: Respuesta del LLM no es JSON válido: '{"items":[{"line":1,"expression":"let\'s let",translation":"dejar que / dejar pasar"},{"line":2,"expression":"Damn it",translation":"Joder / Madre de Dios"}]}'
+2026-10-07 14:44:37,102 INFO    [analyzer] wordlens.state: Estado: PROCESSING -> CAPTURING
+2026-10-07 14:44:38,652 INFO    [analyzer] wordlens.state: Estado: CAPTURING -> PROCESSING
+2026-10-07 14:44:41,900 INFO    [analyzer] wordlens.ai.vocabulary_analyzer: LLM 3.2s para 1 línea(s): {"items":[{"line":1,"expression":"blow it","translation":"perder la oportunidad / fracasar"}]}
+2026-10-07 14:44:41,900 INFO    [analyzer] wordlens.vocabulary.extractor: Descartado 'blow it' (combinación trivial)
+2026-10-07 14:44:41,900 INFO    [analyzer] wordlens.state: Estado: PROCESSING -> CAPTURING
+2026-10-07 14:45:41,500 INFO    [capture] wordlens.app: Subtítulo nuevo: Visual Studio Code
+2026-10-07 14:45:43,004 INFO    [analyzer] wordlens.state: Estado: CAPTURING -> PROCESSING
+2026-10-07 14:45:50,216 INFO    [analyzer] wordlens.ai.vocabulary_analyzer: LLM 7.2s para 1 línea(s): {"items":[{"line":1,"expression":"Visual Studio Code","translation":"Visual Studio Code"}]}
+2026-10-07 14:45:50,216 INFO    [analyzer] wordlens.vocabulary.extractor: Descartado 'Visual Studio Code' (sin traducir)
+2026-10-07 14:45:50,216 INFO    [analyzer] wordlens.state: Estado: PROCESSING -> CAPTURING
