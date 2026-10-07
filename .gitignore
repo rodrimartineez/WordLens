@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+logs/
+config.json
+*.json.tmp
+~vocablens_*
+*.docx
+.vocablens_backups/
+*.pendientes.txt

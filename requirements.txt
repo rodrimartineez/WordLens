@@ -1,0 +1,21 @@
+# Captura de pantalla (GDI vía ctypes, sin binarios externos)
+mss>=10.0
+# Imágenes y preprocesado
+pillow>=11.0
+numpy>=2.0
+# OCR nativo de Windows (Windows.Media.Ocr) mediante proyecciones WinRT
+winrt-runtime>=3.2
+winrt-Windows.Media.Ocr>=3.2
+winrt-Windows.Graphics.Imaging>=3.2
+winrt-Windows.Storage.Streams>=3.2
+winrt-Windows.Globalization>=3.2
+winrt-Windows.Foundation>=3.2
+winrt-Windows.Foundation.Collections>=3.2
+# Frecuencias léxicas (filtro de palabras básicas, idioma, lematización ligera)
+wordfreq>=3.1
+# Documento Word
+python-docx>=1.1
+# Icono de bandeja del sistema
+pystray>=0.19
+# Tests
+pytest>=8.0
