@@ -157,3 +157,7 @@
 2026-10-07 14:45:50,216 INFO    [analyzer] wordlens.ai.vocabulary_analyzer: LLM 7.2s para 1 línea(s): {"items":[{"line":1,"expression":"Visual Studio Code","translation":"Visual Studio Code"}]}
 2026-10-07 14:45:50,216 INFO    [analyzer] wordlens.vocabulary.extractor: Descartado 'Visual Studio Code' (sin traducir)
 2026-10-07 14:45:50,216 INFO    [analyzer] wordlens.state: Estado: PROCESSING -> CAPTURING
+2026-10-07 14:51:04,877 INFO    [capture] wordlens.app: Subtítulo nuevo: Edit" cmhgur.ciön
+2026-10-07 14:51:05,527 INFO    [Thread-4 (stop)] wordlens.state: Estado: CAPTURING -> STOPPED
+2026-10-07 14:51:05,528 INFO    [capture] wordlens.app: Captura finalizada (994 capturas, 143 OCR)
+2026-10-07 14:51:06,387 INFO    [Thread-4 (stop)] wordlens.app: Aviso: Detenido. 14 expresiones nuevas en esta sesión.
