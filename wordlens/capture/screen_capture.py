@@ -59,23 +59,32 @@ def compute_bands(
 
 
 class ScreenCapturer:
-    """Debe crearse y usarse en el mismo hilo (requisito de mss en Windows)."""
+    """Debe crearse y usarse en el mismo hilo (requisito de mss en Windows).
+
+    monitor: rectángulo de la pantalla elegida ({"left","top","width","height"},
+    ver capture/monitors.py). Las franjas se calculan respecto a esa pantalla,
+    con sus coordenadas en el escritorio virtual (una pantalla a la derecha
+    empieza en left=1920, por ejemplo). Sin monitor, la pantalla principal.
+    """
 
     def __init__(
         self,
-        monitor_index: int = 1,
+        monitor: dict | None = None,
         top_fraction: float = 0.33,
         bottom_fraction: float = 0.33,
         scan_top: bool = True,
         scan_bottom: bool = True,
     ) -> None:
         self._sct = mss.MSS() if hasattr(mss, "MSS") else mss.mss()
-        monitors = self._sct.monitors
-        if not 1 <= monitor_index < len(monitors):
-            log.warning("Monitor %s no existe; se usa el principal", monitor_index)
-            monitor_index = 1
-        self.monitor = monitors[monitor_index]
-        self.bands = compute_bands(self.monitor, top_fraction, bottom_fraction, scan_top, scan_bottom)
+        self._fractions = (top_fraction, bottom_fraction, scan_top, scan_bottom)
+        if monitor is None:
+            monitor = next((m for m in self._sct.monitors[1:] if m.get("is_primary")), self._sct.monitors[1])
+        self.set_monitor(monitor)
+
+    def set_monitor(self, monitor: dict) -> None:
+        """Cambia la pantalla capturada (cambio de selección o de pantallas conectadas)."""
+        self.monitor = {k: int(monitor[k]) for k in ("left", "top", "width", "height")}
+        self.bands = compute_bands(self.monitor, *self._fractions)
 
     def grab(self) -> list[BandImage]:
         out = []

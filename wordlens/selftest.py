@@ -75,6 +75,14 @@ def run() -> int:
         result("docx", False, repr(exc))
 
     try:
+        from wordlens.capture import monitors
+
+        found = monitors.list_monitors()
+        result("monitors", bool(found) and found[0].primary, ", ".join(m.label for m in found))
+    except Exception as exc:  # noqa: BLE001
+        result("monitors", False, repr(exc))
+
+    try:
         cap = ScreenCapturer()
         shots = cap.grab()
         cap.close()

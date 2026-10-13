@@ -15,8 +15,9 @@ It is a normal Windows desktop app: install it, open it from the Start menu, pre
 ## Features
 
 - **Real-time subtitle capture** — reads the top and bottom thirds of the screen every 0.5 s (in memory only, never saved to disk).
+- **Capture screen selection** — with two or more monitors, choose the one where the video plays (*Capture screen* in the window; *Identify* shows each screen's number on it). The choice survives disconnecting and reconnecting monitors.
 - **OCR** — the native Windows OCR engine (~15–35 ms per band), tuned for white/yellow subtitles.
-- **Local AI vocabulary extraction** — a local LLM (Ollama) finds phrasal verbs, idioms, collocations and advanced words at B2–C1 level, using the full sentence as context.
+- **Local AI vocabulary extraction** — a local LLM (Ollama) reads the **whole** sentence and keeps **every** item worth learning at upper-B2, C1 or C2 level — advanced words, phrasal verbs, idioms, collocations — so one subtitle can add 0, 1, 2, 3 or more entries. Basic vocabulary, names, cognates and OCR errors are discarded.
 - **Translation** — each expression gets a short translation for its meaning *in that context*.
 - **Two language directions** — English subtitles → Spanish translations, or Spanish subtitles → English translations.
 - **Automatic deduplication** — `figure out`, `Figure out`, `to figure out` and `figure it out` are the same entry; `get at` and `get out` are not.
@@ -73,7 +74,7 @@ You can change the languages and the document at any time from the main window (
 
 1. Open **WordLens** from the Start menu.
 2. Press **Start** (or `Ctrl + Shift + V` from anywhere).
-3. Play your video **with subtitles**, ideally full screen.
+3. Play your video **with subtitles**, ideally full screen. If you have several monitors, pick the one with the video under **Capture screen** (see below).
 4. Minimise or close the window — WordLens keeps working from the **system tray** (the icon may be under the `^` arrow next to the clock).
 5. New expressions are appended to your document as they appear.
 6. Press **Stop** (or `Ctrl + Shift + X`).
@@ -89,6 +90,8 @@ You can change the languages and the document at any time from the main window (
 **Tray menu** (right-click the icon): Open WordLens · Start · Stop · Open vocabulary document · Change vocabulary document… · Settings… · Exit.
 
 Closing or minimising the window **never** stops WordLens; only **Exit** in the tray menu does. Opening WordLens again from the Start menu brings back the existing window.
+
+**Capture screen.** WordLens lists the monitors Windows reports: *Screen 1* is the main one, the rest follow from left to right. With a single monitor the choice is fixed; with several, choose the one where the subtitles appear — the subtitle bands (top and bottom thirds) are taken from that screen. Click **Identify** to see each number on its screen. You can change it while capturing (it applies within a second). If the chosen monitor is disconnected, WordLens warns you and captures the main screen meanwhile; when you plug it back in, it returns to it automatically. The list updates by itself when monitors are connected or disconnected.
 
 **Settings** (link at the bottom of the window, or the tray menu): AI model, hotkeys, notifications, plus links to the log, the data folder and the advanced `config.json`.
 
@@ -130,7 +133,7 @@ WordLens never writes in its installation folder and never puts its own files ne
 | **"Ollama is installed but not responding"** | Open *Ollama* from the Start menu and press Start again. |
 | **"Couldn't register the shortcut"** | Another app uses that combination. Change it in *Settings* (e.g. `ctrl+alt+f9`). |
 | `Ctrl+Shift+V` no longer pastes without formatting in other apps | Expected while WordLens is open (the hotkey is global). Change it in *Settings* if you use it often. |
-| **No subtitles detected** | 1) Open the log (*Settings → Open log*): if there are no "Subtítulo nuevo" lines, the problem is capture/OCR. 2) For subtitles that are not white or yellow, set `"ocr_preprocess": "gray"` in the advanced `config.json`. 3) Check the video is on the main monitor (`monitor`). |
+| **No subtitles detected** | 1) Open the log (*Settings → Open log*): if there are no "Subtítulo nuevo" lines, the problem is capture/OCR. 2) For subtitles that are not white or yellow, set `"ocr_preprocess": "gray"` in the advanced `config.json`. 3) With several monitors, check **Capture screen** is the one with the video (use *Identify*). |
 | **Black capture (Netflix, Disney+, Prime…)** | DRM protection. In Chrome/Edge, disable *Settings → System → Use graphics acceleration* and restart the browser. Local players (VLC, MPC-HC) and YouTube work. |
 | **Spanish subtitles not read** | Install the Spanish OCR pack: *Settings → Time & language → Language & region → Add a language → Español (España)*, or in an admin PowerShell: `Add-WindowsCapability -Online -Name "Language.OCR~~~es-ES~0.0.1.0"` (use `en-US` for English). |
 | **"Windows is blocking WordLens from writing in this folder"** | Windows Defender *Controlled folder access* protects Documents, Desktop, Pictures… Choose a folder outside them (e.g. `%USERPROFILE%\WordLens` or `D:\Inglés`), or allow `WordLens.exe` in *Windows Security → Virus & threat protection → Ransomware protection → Allow an app through Controlled folder access*. |
@@ -171,7 +174,7 @@ Other options: `--start` (start capturing immediately), `--hidden` (tray only), 
 .venv\Scripts\python.exe -m pytest
 ```
 
-They cover real OCR on synthetic subtitle images (noise, gradients, yellow text, two lines, clocks, side text, Spanish), real screen capture, subtitle stability and history, language filtering, normalisation and deduplication for both languages, broken LLM JSON, vocabulary validation, cognates, the Word writer (existing documents, corrupt files, Word locks, backups, pending recovery), the state machine, global hotkeys fired with real key presses, Ollama status detection, settings and data-folder isolation, and the real model.
+They cover real OCR on synthetic subtitle images (noise, gradients, yellow text, two lines, clocks, side text, Spanish), real screen capture, subtitle stability and history, language filtering, normalisation and deduplication for both languages, broken LLM JSON, vocabulary validation, cognates, the Word writer (existing documents, corrupt files, Word locks, backups, pending recovery), the state machine, global hotkeys fired with real key presses, Ollama status detection, settings and data-folder isolation, several items per subtitle (scripted model and real model: 0, 1, 2, 3 and 4 items, no basic words), capture screen selection (one, two and three screens, disconnection and reconnection, and real OCR on each connected monitor), and the real model.
 
 **Developer tools:**
 
@@ -187,7 +190,17 @@ They cover real OCR on synthetic subtitle images (noise, gradients, yellow text,
 .venv\Scripts\python.exe tools\diagnose.py
 ```
 
-`try_text.py` analyses sentences with the real model; `subtitle_simulator.py` shows full-screen fake subtitles (with `--file`, one per line, `top:` prefix for the top band) to test the whole chain; `diagnose.py` checks every component.
+`try_text.py` analyses sentences with the real model; `subtitle_simulator.py` shows full-screen fake subtitles (with `--file`, one per line, `top:` prefix for the top band; `--screen 2` to use another monitor) to test the whole chain; `diagnose.py` checks every component.
+
+**Extraction benchmark** — 61 annotated sentences (0 to 4 items each, B1 to C2, real subtitles, names, OCR errors, cognates) in `tests/benchmark/extraction_cases.json`. It reports found / missed / false positives, precision, recall, translation accuracy and how many multi-item sentences come out complete. `--impl` evaluates another copy of the code with the same scoring, to compare versions:
+
+```bash
+.venv\Scripts\python.exe tools\benchmark_extraction.py --details
+```
+
+```bash
+.venv\Scripts\python.exe tools\benchmark_extraction.py --batch 2 --out new.json
+```
 
 `WORDLENS_CAPTURE_VISIBLE=1` lets screenshot tools see WordLens' own windows (normally they are hidden from screen capture so WordLens doesn't read its own interface as a subtitle).
 
@@ -240,7 +253,7 @@ The version comes from `wordlens/__init__.py`. Silent install for automation: `W
 ## How it works
 
 ```text
-Start ─▶ every 0.5 s: capture top 33 % and bottom 33 % of the screen (memory only)
+Start ─▶ every 0.5 s: capture top 33 % and bottom 33 % of the chosen screen (memory only)
             ▼
          Preprocess: isolate white/yellow text (subtitle colours)
             ▼
@@ -250,10 +263,15 @@ Start ─▶ every 0.5 s: capture top 33 % and bottom 33 % of the screen (memory
             ▼
          New?  seen in 2 consecutive frames, not processed in the last 3 min
             ▼  only new text
-         Local LLM (Ollama), whole sentence as context → JSON
+         Candidates (no AI): less common words + verb/particle pairs, sent as a checklist
             ▼
-         Deterministic validation: drops basic words, cognates, whole sentences,
-         invented expressions not in the subtitle, broken JSON…
+         Local LLM (Ollama): reads the whole line, returns EVERY item worth learning → JSON
+            ▼
+         Second look (only if needed): less common words it did not evaluate, one by one
+            ▼
+         Deterministic validation: drops basic words, cognates, names, OCR errors,
+         whole sentences, invented expressions; recovers items from broken JSON;
+         "incredibly tacky" → "tacky"; keeps the longest of overlapping units
             ▼
          Already in the document?  (normalised comparison)
             ▼  only new ones
@@ -296,14 +314,14 @@ WordLens/
 │   ├── app.py                    # Controller: sessions, capture/analyzer threads, queue, errors
 │   ├── state.py                  # State machine INACTIVE/CAPTURING/PROCESSING/STOPPED
 │   ├── selftest.py               # --self-test for the packaged app
-│   ├── capture/                  # Screen bands, subtitle preprocessing, change detection, subtitle filter
+│   ├── capture/                  # Screen bands, monitors (capture screen), preprocessing, change detection, subtitle filter
 │   ├── ocr/ocr_engine.py         # Windows.Media.Ocr
 │   ├── ai/
 │   │   ├── ollama_client.py      # Ollama REST API (cancellable, model pull)
 │   │   ├── ollama_setup.py       # Find / start Ollama, check the model
 │   │   ├── prompts.py            # System prompts and few-shot examples (EN→ES, ES→EN)
 │   │   └── vocabulary_analyzer.py
-│   ├── vocabulary/               # Normalisation, languages, validation, deduplication
+│   ├── vocabulary/               # Candidates, normalisation, languages, validation, deduplication
 │   ├── document/word_writer.py   # Safe .docx reading/writing
 │   ├── input/hotkeys.py          # RegisterHotKey
 │   ├── ui/
@@ -313,15 +331,16 @@ WordLens/
 │   └── config/
 │       ├── paths.py              # App files vs user data (production / development)
 │       └── settings.py           # config.json
-├── tools/                        # try_text, subtitle_simulator, diagnose, make_icon
-└── tests/                        # pytest
+├── tools/                        # try_text, subtitle_simulator, diagnose, benchmark_extraction, make_icon
+└── tests/                        # pytest; benchmark/extraction_cases.json = annotated benchmark
 ```
 
 ### Known limitations
 
 - **DRM video** may be captured black (see *Troubleshooting*).
 - **Translation quality** depends on the model; it is right most of the time, but review the document now and then — you can edit or delete lines by hand.
-- **Conservative filter**: some genuine expressions made of very common words (e.g. *menos mal*) are skipped to avoid filling the document with basic vocabulary.
+- **Conservative filter**: some genuine expressions made of very common words (e.g. *menos mal*) are skipped to avoid filling the document with basic vocabulary. The small model also misses some items (about 1 in 7 in the benchmark) and occasionally keeps only part of an idiom (*come back* instead of *come back to bite*).
+- **Screen numbers** follow WordLens' own order (main screen first, then left to right), which may differ from the numbers in Windows Settings — use *Identify*.
 - **Small GPUs**: in very fast dialogue, some lines may be dropped if the queue fills up.
 - **Unusual subtitle colours**: use `"ocr_preprocess": "gray"`.
 - **Windows only** (native OCR, hotkeys and capture exclusion).

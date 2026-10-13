@@ -46,7 +46,11 @@ class Settings:
     backup_count: int = 10
 
     # Captura de pantalla
-    monitor: int = 1  # 1 = monitor principal (numeración de mss)
+    # Pantalla donde se buscan los subtítulos (ver capture/monitors.py).
+    # capture_monitor_id identifica el monitor físico y es lo que manda;
+    # capture_monitor es el número que ve el usuario (1 = principal).
+    capture_monitor: int = 1
+    capture_monitor_id: str = ""
     capture_interval_seconds: float = 0.5
     top_band_fraction: float = 0.33  # tercio superior
     bottom_band_fraction: float = 0.33  # tercio inferior
@@ -77,6 +81,11 @@ class Settings:
     batch_wait_seconds: float = 1.5
     max_queue_lines: int = 40
     prefilter_trivial_lines: bool = True
+    # Marca en cada línea palabras poco frecuentes y posibles phrasal verbs para
+    # que el modelo no se quede con el primer elemento (ver vocabulary/candidates.py).
+    candidate_hints: bool = True
+    # Segunda pasada sólo para las palabras poco frecuentes que el modelo no evaluó.
+    review_pass: bool = True
 
     # Filtro de vocabulario
     max_single_word_zipf: float = 4.5
@@ -133,6 +142,11 @@ def _migrate(data: dict) -> bool:
             changed = True
     if data.get("ocr_language") == "en-US":  # antiguo valor fijo -> automático
         data["ocr_language"] = "auto"
+        changed = True
+    if "monitor" in data:  # 1.0: índice de mss (1 = primer monitor) -> capture_monitor
+        legacy = data.pop("monitor")
+        if isinstance(legacy, int) and legacy > 1 and "capture_monitor" not in data:
+            data["capture_monitor"] = legacy
         changed = True
     return changed
 

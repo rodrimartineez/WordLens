@@ -114,7 +114,7 @@ def test_real_screen_capture_uses_thirds():
     from wordlens.config.settings import Settings
 
     s = Settings()
-    cap = ScreenCapturer(1, s.top_band_fraction, s.bottom_band_fraction)
+    cap = ScreenCapturer(None, s.top_band_fraction, s.bottom_band_fraction)
     mon_h = cap.monitor["height"]
     shots = cap.grab()
     cap.close()

@@ -85,10 +85,11 @@ def test_trivial_spanish_line():
 
 def test_prompt_uses_spanish_examples():
     msgs = build_messages(["Te echo de menos."], source_language="Spanish", target_language="English")
-    assert "Spanish subtitles for a English speaker" in msgs[0]["content"]
+    assert "Spanish subtitles" in msgs[0]["content"]
+    assert "native language is English" in msgs[0]["content"]
     assert "darse cuenta" in msgs[2]["content"]
     en = build_messages(["x"])
-    assert "figure out" in en[2]["content"]
+    assert "call off" in en[2]["content"]
 
 
 def test_writer_dedups_with_spanish_rules(tmp_path):

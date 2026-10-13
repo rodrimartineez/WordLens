@@ -28,6 +28,7 @@ from wordlens.ai.ollama_client import (
 )
 from wordlens.ai.ollama_setup import OllamaState
 from wordlens.ai.vocabulary_analyzer import VocabularyAnalyzer
+from wordlens.capture import monitors
 from wordlens.config.paths import BACKUP_DIR, PENDING_DIR
 from wordlens.config.settings import Settings
 from wordlens.document.word_writer import DocumentError, DocumentLockedError, WordWriter
@@ -79,6 +80,8 @@ class WordLensApp:
         self._error_listeners: list[Callable[[AppError | None], None]] = []
         self.last_error: AppError | None = None
         self._last_relaunch = 0.0
+        # Pantalla que se está capturando (la elegida o, si no está conectada, la principal).
+        self.capture_selection: monitors.Selection | None = None
 
     # ------------------------------------------------------------ utilidades
     def set_notifier(self, notifier: Notifier) -> None:
@@ -275,8 +278,13 @@ class WordLensApp:
         enable_dpi_awareness()
         try:
             ocr = WindowsOcr(s.ocr_tag)
+            selection = self.resolve_capture_monitor()
             capturer = ScreenCapturer(
-                s.monitor, s.top_band_fraction, s.bottom_band_fraction, s.scan_top, s.scan_bottom
+                selection.monitor.rect if selection.monitor else None,
+                s.top_band_fraction,
+                s.bottom_band_fraction,
+                s.scan_top,
+                s.scan_bottom,
             )
         except (OcrUnavailableError, Exception) as exc:  # noqa: BLE001
             log.exception("No se pudo iniciar la captura")
@@ -292,10 +300,29 @@ class WordLensApp:
         changes = ChangeDetector()
         last_seen: dict[str, list[str]] = {}
         errors = 0
-        log.info("Captura iniciada: %s", [(b.name, b.width, b.height) for b in capturer.bands])
+        log.info(
+            "Captura iniciada en %s: %s",
+            selection.monitor.label if selection.monitor else "pantalla principal",
+            [(b.name, b.left, b.top, b.width, b.height) for b in capturer.bands],
+        )
+        next_monitor_check = time.monotonic() + 1.0
         try:
             while not stop.is_set():
                 t0 = time.perf_counter()
+                if time.monotonic() >= next_monitor_check:
+                    # La pantalla elegida puede cambiar en plena sesión (selección
+                    # del usuario, monitor desconectado o reconectado, resolución).
+                    next_monitor_check = time.monotonic() + 1.0
+                    selection = self.resolve_capture_monitor()
+                    if selection.monitor and selection.monitor.rect != capturer.monitor:
+                        capturer.set_monitor(selection.monitor.rect)
+                        changes.reset()
+                        last_seen.clear()
+                        log.info(
+                            "Captura movida a %s: %s",
+                            selection.monitor.label,
+                            [(b.name, b.left, b.top, b.width, b.height) for b in capturer.bands],
+                        )
                 try:
                     visible: list[str] = []
                     for shot in capturer.grab():
@@ -331,6 +358,24 @@ class WordLensApp:
             capturer.close()
             ocr.close()
             log.info("Captura finalizada (%d capturas, %d OCR)", self.stats.frames, self.stats.ocr_runs)
+
+    def resolve_capture_monitor(self) -> monitors.Selection:
+        """Pantalla a capturar ahora mismo. Avisa al entrar o salir del modo de reserva."""
+        s = self.settings
+        selection = monitors.resolve(monitors.list_monitors(), s.capture_monitor_id, s.capture_monitor)
+        previous = self.capture_selection
+        self.capture_selection = selection
+        if previous is not None and previous.missing != selection.missing and self.state.is_active:
+            if selection.missing:
+                log.warning("La pantalla elegida (%s) no está conectada", s.capture_monitor_id)
+                self.notify(
+                    f"Screen {s.capture_monitor} is not connected. Capturing on the main screen until it is back.",
+                    key="monitor",
+                )
+            else:
+                self.notify(f"Screen {s.capture_monitor} is back. Capturing on it again.", key="monitor")
+            self._emit_stats()
+        return selection
 
     def _enqueue(self, q: queue.Queue[SubtitleLine], line: SubtitleLine) -> None:
         log.info("Subtítulo nuevo: %s", line.text)

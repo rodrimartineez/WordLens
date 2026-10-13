@@ -29,6 +29,7 @@ from PIL import Image, ImageDraw, ImageTk
 from wordlens.ai import ollama_setup
 from wordlens.ai.ollama_client import OllamaAborted, OllamaClient, OllamaError
 from wordlens.app import AppError, WordLensApp
+from wordlens.capture import monitors
 from wordlens.config.paths import (
     CONFIG_PATH,
     DATA_DIR,
@@ -225,6 +226,7 @@ class MainWindow:
         self._ai_text = "Checking AI model…"
         self._ai_color = SUBTLE
         self.tray = None  # lo asigna main.py
+        self._watching_screens = False
 
         self.root = tk.Tk()
         self.root.withdraw()
@@ -528,6 +530,9 @@ class MainWindow:
         # Idiomas
         self.src_combo, self.dst_combo = self._language_pickers(body)
 
+        # Pantalla de captura
+        self._build_screen_picker(body)
+
         # Documento
         self._section_label(body, "Vocabulary document").pack(anchor="w", pady=(p(16), p(4)))
         doc = tk.Frame(body, bg=CARD, highlightthickness=1, highlightbackground=BORDER, padx=p(12), pady=p(10))
@@ -576,6 +581,101 @@ class MainWindow:
         self.refresh()
         self.check_ai_async()
         self.root.after(30_000, self._periodic_ai_check)
+
+    # ------------------------------------------------------- pantalla de captura
+    def _build_screen_picker(self, body: tk.Frame) -> None:
+        p = self.px
+        head = tk.Frame(body, bg=BG)
+        head.pack(fill="x", pady=(p(16), p(4)))
+        self._section_label(head, "Capture screen").pack(side="left")
+        self.identify_link = LinkButton(head, "Identify", self.identify_screens, bg=BG, font=("Segoe UI", 8))
+        self.identify_link.pack(side="right")
+        self.screen_combo = ttk.Combobox(
+            body, state="readonly", style="WL.TCombobox", font=("Segoe UI", 10), width=1
+        )
+        self.screen_combo.pack(fill="x")
+        self.screen_combo.bind("<<ComboboxSelected>>", lambda _e: self._screen_chosen())
+        self.screen_warning = tk.Label(
+            body, text="", bg=BG, fg=STATUS_COLORS["Processing"], font=("Segoe UI", 8),
+            wraplength=p(330), justify="left", anchor="w",
+        )
+        self._monitors: list[monitors.Monitor] = []
+        self._monitor_sig: tuple | None = None
+        self._update_screens(force=True)
+        if not self._watching_screens:
+            self._watching_screens = True
+            self.root.after(2000, self._watch_screens)
+
+    def _watch_screens(self) -> None:
+        """Detecta monitores conectados o desconectados mientras la ventana existe."""
+        try:
+            if getattr(self, "view", "") == "main":
+                self._update_screens()
+        finally:
+            self.root.after(2000, self._watch_screens)
+
+    def _update_screens(self, force: bool = False) -> None:
+        found = monitors.list_monitors()
+        sig = monitors.signature(found)
+        if sig == self._monitor_sig and not force:
+            return
+        if self._monitor_sig is not None and sig != self._monitor_sig:
+            log.info("Pantallas conectadas: %s", [f"{m.label} {m.device}" for m in found])
+        self._monitors, self._monitor_sig = found, sig
+        s = self.settings
+        selection = monitors.resolve(found, s.capture_monitor_id, s.capture_monitor)
+        if selection.monitor and not selection.missing and s.capture_monitor != selection.monitor.number:
+            # La misma pantalla puede cambiar de número al conectar/desconectar otras.
+            s.capture_monitor = selection.monitor.number
+            save_settings(s)
+        labels = [m.label for m in found]
+        self.screen_combo.configure(values=labels)
+        if selection.missing:
+            self.screen_combo.set(f"Screen {s.capture_monitor} · not connected")
+            main = selection.monitor.label if selection.monitor else "no screen"
+            self.screen_warning.configure(
+                text=f"The screen you chose is not connected. Using {main} until you "
+                "reconnect it or choose another one."
+            )
+            self.screen_warning.pack(fill="x", pady=(self.px(3), 0), after=self.screen_combo)
+        else:
+            self.screen_combo.set(selection.monitor.label if selection.monitor else "No screen detected")
+            self.screen_warning.pack_forget()
+        # Con una sola pantalla no hay nada que elegir (se muestra, pero fija).
+        single = len(found) <= 1 and not selection.missing
+        self.screen_combo.configure(state="disabled" if single else "readonly")
+
+    def _screen_chosen(self) -> None:
+        idx = self.screen_combo.current()
+        if not 0 <= idx < len(self._monitors):
+            return
+        chosen = self._monitors[idx]
+        s = self.settings
+        s.capture_monitor, s.capture_monitor_id = chosen.number, chosen.device_id
+        save_settings(s)
+        log.info("Pantalla de captura: %s (%s, %s)", chosen.label, chosen.device, chosen.device_id)
+        self._update_screens(force=True)  # la sesión activa la aplica en ~1 s
+
+    def identify_screens(self) -> None:
+        """Muestra el número de cada pantalla sobre ella durante unos segundos."""
+        size = self.px(150)
+        for m in monitors.list_monitors():
+            top = tk.Toplevel(self.root)
+            top.overrideredirect(True)
+            top.attributes("-topmost", True)
+            chosen = m.device_id == self.settings.capture_monitor_id or (
+                not self.settings.capture_monitor_id and m.number == self.settings.capture_monitor
+            )
+            color = ACCENT if chosen else STOP
+            top.configure(bg=color)
+            tk.Label(top, text=str(m.number), bg=color, fg="#FFFFFF", font=("Segoe UI Semibold", 64)).pack(
+                expand=True, fill="both"
+            )
+            x = m.left + (m.width - size) // 2
+            y = m.top + (m.height - size) // 2
+            top.geometry(f"{size}x{size}+{x}+{y}")
+            exclude_from_capture(top)
+            top.after(2500, top.destroy)
 
     def _periodic_ai_check(self) -> None:
         """Mantiene al día el estado de Ollama mostrado en el pie (p. ej. si se cierra)."""
@@ -627,7 +727,11 @@ class MainWindow:
             detail = "Checking the document and the AI model…"
         elif active:
             last = ", ".join(stats.last_added[:3])
-            detail = f"Watching the screen for subtitles. Latest: {last}" if last else "Watching the screen for subtitles."
+            sel = self.app.capture_selection
+            where = f"Screen {sel.monitor.number}" if sel and sel.monitor else "the screen"
+            detail = f"Watching {where} for subtitles."
+            if last:
+                detail += f" Latest: {last}"
         elif status == "Stopped":
             detail = "Capture stopped. Press Start to begin a new session."
         else:

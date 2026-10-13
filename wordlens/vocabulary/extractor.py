@@ -17,6 +17,7 @@ from typing import Any
 
 from wordfreq import zipf_frequency
 
+from .candidates import proper_nouns
 from .languages import TRANSLATION_STOPWORDS, profile
 from .models import VocabularyItem
 from .normalization import (
@@ -28,6 +29,12 @@ from .normalization import (
 )
 
 log = logging.getLogger(__name__)
+
+# Adverbios de grado que el modelo arrastra delante de la palabra interesante.
+_INTENSIFIERS = frozenset(
+    """very really so too pretty quite totally completely utterly incredibly extremely
+    truly absolutely highly deeply terribly awfully super fairly rather""".split()
+)
 
 _PLACEHOLDER_TOKENS = frozenset(
     "one's oneself someone somebody something sb sth it him her them me us you".split()
@@ -51,8 +58,11 @@ def parse_llm_json(raw: str) -> list[dict[str, Any]]:
             except json.JSONDecodeError:
                 data = None
     if data is None:
-        log.warning("Respuesta del LLM no es JSON válido: %.200r", raw)
-        return []
+        items = _salvage_items(text)
+        log.warning(
+            "Respuesta del LLM no es JSON válido (%d elemento(s) recuperados): %.300r", len(items), raw
+        )
+        return items
     if isinstance(data, list):
         items = data
     elif isinstance(data, dict):
@@ -60,6 +70,41 @@ def parse_llm_json(raw: str) -> list[dict[str, Any]]:
     else:
         return []
     return [it for it in items if isinstance(it, dict)] if isinstance(items, list) else []
+
+
+_JSON_STRING = r'"((?:[^"\\]|\\.)*)"'
+_FIELD = re.compile(r'"(line|expression|translation)"\s*:\s*(?:' + _JSON_STRING + r"|(-?\d+))")
+
+
+def _salvage_items(text: str) -> list[dict[str, Any]]:
+    """Recupera los elementos completos de un JSON mal formado.
+
+    El modelo pequeño a veces olvida una llave ('..."translation":"x"]}') o corta
+    la respuesta: sin esto se perdía la línea entera, incluidos los elementos
+    que sí estaban bien escritos. Los campos se leen en orden y una clave
+    repetida marca el comienzo del siguiente elemento.
+    """
+    items: list[dict[str, Any]] = []
+    current: dict[str, Any] = {}
+
+    def flush() -> None:
+        if isinstance(current.get("expression"), str) and isinstance(current.get("translation"), str):
+            items.append(dict(current))
+        current.clear()
+
+    for m in _FIELD.finditer(text):
+        key, string, number = m.group(1), m.group(2), m.group(3)
+        if key in current:
+            flush()
+        if string is None:
+            current[key] = int(number)
+            continue
+        try:
+            current[key] = json.loads(f'"{string}"')
+        except json.JSONDecodeError:
+            current[key] = string
+    flush()
+    return items
 
 
 def clean_translation(text: str) -> str:
@@ -81,24 +126,46 @@ def _strip_accents(text: str) -> str:
     )
 
 
+def _single_word(option: str, target: str) -> str | None:
+    stopwords = TRANSLATION_STOPWORDS.get(target, frozenset())
+    words = [w for w in re.findall(r"[^\W\d_]+", option.lower()) if _strip_accents(w) not in stopwords]
+    return words[0] if len(words) == 1 else None
+
+
+def _looks_alike(expression: str, word: str) -> bool:
+    expr, word = _strip_accents(expression), _strip_accents(word)
+    return len(os.path.commonprefix([expr, word])) >= 6 or SequenceMatcher(None, expr, word).ratio() >= 0.75
+
+
+def _real_word(word: str, lang: str) -> bool:
+    return zipf_frequency(word, lang) >= 1.5  # "reluctante" (ruido del corpus) tiene 1.2
+
+
 def is_transparent_cognate(expression: str, translation: str, target: str = "es") -> bool:
     """True si la traducción es casi la misma palabra (supermarket -> supermercado).
 
     Un cognado transparente no aporta nada a un hispanohablante. Los falsos amigos
-    no se ven afectados: su traducción en contexto es otra palabra distinta.
+    no se ven afectados: su traducción en contexto es otra palabra distinta. Una
+    "traducción" calcada que no existe en el idioma destino (reluctant ->
+    "reluctante") no es un cognado sino un error del modelo.
     """
-    expr = _strip_accents(expression)
-    stopwords = TRANSLATION_STOPWORDS.get(target, frozenset())
     for option in translation.split("/"):
-        words = [w for w in re.findall(r"[a-zñ]+", _strip_accents(option)) if w not in stopwords]
-        if len(words) != 1:
-            continue
-        word = words[0]
-        if len(os.path.commonprefix([expr, word])) >= 6:
-            return True
-        if SequenceMatcher(None, expr, word).ratio() >= 0.75:
+        word = _single_word(option, target)
+        if word and _looks_alike(expression, word) and _real_word(word, target):
             return True
     return False
+
+
+def drop_invented_translations(expression: str, translation: str, target: str = "es") -> str:
+    """Quita las opciones calcadas de la palabra original que no existen ("reluctante")."""
+    kept = []
+    for option in translation.split(" / "):
+        word = _single_word(option, target)
+        if word and _looks_alike(expression, word) and not _real_word(word, target):
+            log.info("Traducción inventada descartada: %r -> %r", expression, option)
+            continue
+        kept.append(option)
+    return " / ".join(kept)
 
 
 _ES_INFINITIVE = re.compile(r"^(\w+?)(?:ar|er|ir)(?:se|me|te|nos|os|le|la|lo|les)?$")
@@ -140,6 +207,21 @@ def _es_verb_grounded(token: str, ctx_tokens: list[str]) -> bool:
     return any(c.startswith(stem[:4]) or c.startswith(stem) for c in ctx_tokens)
 
 
+_SUBJECT_PRONOUNS = frozenset("i you he she we they".split())
+
+
+def _basic_clause(words: list[str], function_words: frozenset[str], basic_zipf: float) -> bool:
+    """Trozo de oración (lleva sujeto) hecho sólo de palabras básicas.
+
+    Los modismos con sujeto son rarísimos; "call it a day" o "make up one's
+    mind" no llevan pronombre sujeto y no se ven afectados.
+    """
+    if not any(w in _SUBJECT_PRONOUNS for w in words[1:]):
+        return False
+    content = [w for w in words if w not in function_words and w not in _PLACEHOLDER_TOKENS]
+    return all(zipf_frequency(lemma(w), "en") >= basic_zipf for w in content)
+
+
 def validate_item(
     raw_item: dict[str, Any],
     context: str,
@@ -160,12 +242,19 @@ def validate_item(
         return None
 
     expr = canonical_expression(expression, source)
-    trans = clean_translation(translation)
     words = expr.split()
+    if source == "en" and len(words) > 1 and words[0] in _INTENSIFIERS:
+        words = words[1:]  # "incredibly tacky" -> "tacky"
+        expr = " ".join(words)
+    trans = drop_invented_translations(expr, clean_translation(translation), target)
 
     reason = None
     if not expr or not trans:
         reason = "vacío"
+    elif any(w in proper_nouns(context) for w in words):
+        reason = "nombre propio"
+    elif len(words) == 1 and zipf_frequency(expr, source) < 1.0 and "-" not in expr:
+        reason = "no es una palabra real (¿error de OCR?)"
     elif len(words) > max_words or len(expr) > 60:
         reason = "demasiado larga"
     elif len(trans) > 90:
@@ -176,6 +265,8 @@ def validate_item(
         reason = "sin traducir"
     elif len(words) >= 3 and words[0] in lang.subject_starters:
         reason = "parece una frase completa"
+    elif source == "en" and len(words) >= 3 and _basic_clause(words, lang.function_words, max_single_word_zipf):
+        reason = "oración con palabras básicas"  # "tell what you want"
     elif (grounding_text or context) and not _grounded(expr, grounding_text or context, source):
         reason = "no aparece en el subtítulo"
     elif len(words) == 1:

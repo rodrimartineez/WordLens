@@ -77,12 +77,20 @@ def check_ocr(settings):
 
 @check("Captura de pantalla")
 def check_capture(settings):
+    from wordlens.capture import monitors
     from wordlens.capture.screen_capture import ScreenCapturer, enable_dpi_awareness
 
     enable_dpi_awareness()
-    cap = ScreenCapturer(settings.monitor, settings.top_band_fraction, settings.bottom_band_fraction)
+    found = monitors.list_monitors()
+    for m in found:
+        print(f"   {m.label}  {m.device}  posición ({m.left}, {m.top})")
+    sel = monitors.resolve(found, settings.capture_monitor_id, settings.capture_monitor)
+    if sel.missing:
+        print(f"{WARN} La pantalla elegida no está conectada; se usaría la principal")
+    cap = ScreenCapturer(sel.monitor.rect if sel.monitor else None, settings.top_band_fraction,
+                         settings.bottom_band_fraction)
     mon = cap.monitor
-    print(f"{OK} Monitor {settings.monitor}: {mon['width']}x{mon['height']}")
+    print(f"{OK} Pantalla de captura: {sel.monitor.label if sel.monitor else '?'} {mon}")
     t0 = time.perf_counter()
     shots = cap.grab()
     ms = (time.perf_counter() - t0) * 1000

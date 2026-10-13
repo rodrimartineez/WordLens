@@ -6,13 +6,18 @@ capturando y observa cómo se rellena el documento.
 
   .venv\\Scripts\\python.exe tools\\subtitle_simulator.py            (Esc para salir)
   .venv\\Scripts\\python.exe tools\\subtitle_simulator.py --seconds 3 --loops 2
+  .venv\\Scripts\\python.exe tools\\subtitle_simulator.py --screen 2   (pantalla 2 de WordLens)
 """
 
 from __future__ import annotations
 
 import argparse
 import random
+import sys
 import tkinter as tk
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 DEFAULT_SUBTITLES = [
     ("bottom", "I couldn't figure out what he was getting at."),
@@ -34,7 +39,16 @@ def main() -> None:
     parser.add_argument("--gap", type=float, default=0.6, help="Pausa sin subtítulo entre líneas")
     parser.add_argument("--loops", type=int, default=1, help="Veces que se repite la lista (0 = infinito)")
     parser.add_argument("--file", help="Archivo con subtítulos (una línea cada uno; prefijo 'top:' para arriba)")
+    parser.add_argument("--screen", type=int, default=1, help="Pantalla (numeración de WordLens: 1 = principal)")
     args = parser.parse_args()
+
+    from wordlens.capture import monitors
+    from wordlens.capture.screen_capture import enable_dpi_awareness
+
+    enable_dpi_awareness()
+    screen = next((m for m in monitors.list_monitors() if m.number == args.screen), None)
+    if screen is None:
+        parser.error(f"No hay pantalla {args.screen}")
 
     subtitles = DEFAULT_SUBTITLES
     if args.file:
@@ -48,10 +62,12 @@ def main() -> None:
 
     root = tk.Tk()
     root.title("WordLens - simulador de subtítulos")
+    root.geometry(f"{screen.width}x{screen.height}+{screen.left}+{screen.top}")
+    root.update_idletasks()
     root.attributes("-fullscreen", True)
     root.configure(cursor="none")
     root.bind("<Escape>", lambda _e: root.destroy())
-    w, h = root.winfo_screenwidth(), root.winfo_screenheight()
+    w, h = screen.width, screen.height
     canvas = tk.Canvas(root, width=w, height=h, highlightthickness=0)
     canvas.pack(fill="both", expand=True)
     font_size = max(20, h // 24)
