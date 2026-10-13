@@ -314,3 +314,8 @@ def test_real_model_detects_several_items_per_line_without_basic_words():
     assert sum(h >= 2 for _, h, _, _ in multi) >= len(multi) - 1
     assert sum(h for _, h, _, _ in report) >= 0.75 * sum(n for n, *_ in report)
     assert any(n >= 3 and h >= 3 for n, h, _, _ in report)
+
+
+def test_translation_options_differing_only_in_accents_are_merged():
+    item = validate_item({"expression": "merger", "translation": "fusion / fusión"}, "They announced the merger.")
+    assert item.translation == "fusión"

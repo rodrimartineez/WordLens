@@ -115,8 +115,14 @@ def clean_translation(text: str) -> str:
     seen: list[str] = []
     for p in parts:
         p = re.sub(r"\s+", " ", p)
-        if p and p.lower() not in (s.lower() for s in seen):
+        if not p:
+            continue
+        # "fusion / fusión": la misma opción con y sin tilde cuenta como una (gana la que lleva tilde).
+        same = next((i for i, s in enumerate(seen) if _strip_accents(s) == _strip_accents(p)), None)
+        if same is None:
             seen.append(p)
+        elif p.lower() != seen[same].lower() and p.lower() != _strip_accents(p):
+            seen[same] = p
     return " / ".join(seen[:2])
 
 

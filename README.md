@@ -286,6 +286,28 @@ Measured on the development machine: i7-11800H, 16 GB RAM, RTX 3050 Ti Laptop (4
 
 **AI model — `maternion/ling-3.0-tiny:8b`.** Mixture-of-Experts, 7.9 B total / 1.3 B active parameters per token, 5.3 GB (Q4_K_M). On a 4 GB GPU, ~42 % runs on the GPU and the rest on CPU. Thanks to Ollama's prefix cache (the fixed ~560-token prompt is reused) a line takes **~1 s** including any expressions found; the first load takes ~40–80 s and is done when the session starts. Good at phrasal verbs, idioms and advanced words and at lemmatising; weak points are proposing basic words or cognates (filtered deterministically) and occasional imprecise translations. Compared with the same prompt: `qwen3.5:4b` was slightly more precise but slower; `mistral 7B` translated worse ("estar bajo mi piel"). Any Ollama model can be selected in *Settings*.
 
+**Vocabulary extraction — several items per subtitle (1.1).** In 1.0 the small model usually returned only the *first* interesting item of a line, and a malformed JSON answer lost the whole line. Nothing after the model was cutting the list; the cause was the model itself and the prompt ("be conservative", single-item examples). 1.1 changes four things, each measured:
+
+1. A prompt that asks for *every* item at upper-B2/C1/C2 level, with examples of 0, 1, 2 and 3 items per line and of what to skip.
+2. Candidates found without AI (less common words by `wordfreq` frequency, verb + particle pairs) sent next to each line as a checklist; the model still decides.
+3. A second look, only when needed, at less common words the model did not evaluate (it sometimes answers `[]` for a line with clearly advanced words).
+4. Recovery of every complete item from broken JSON, intensifier removal ("incredibly tacky" → "tacky"), names and non-words rejected, invented "cognate" translations dropped, longest overlapping unit kept.
+
+Benchmark (`tools/benchmark_extraction.py`, 61 annotated sentences with 84 expected items, same model `ling-3.0-tiny:8b`):
+
+| Lines per AI call | Version | Found | Missed | False positives | Precision | Recall | Multi-item sentences complete | …with only 1 found | FP on basic sentences |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | 1.0 | 47 | 37 | 7 | 0.87 | 0.56 | 0 / 26 | 21 | 6 |
+| 1 | **1.1** | **72** | **12** | **4** | **0.95** | **0.86** | **19 / 26** | **2** | **0** |
+| 2 | 1.0 | 52 | 32 | 12 | 0.81 | 0.62 | 4 / 26 | 14 | 9 |
+| 2 | **1.1** | **74** | **10** | **11** | **0.87** | **0.88** | **18 / 26** | **3** | **2** |
+| 4 | 1.0 | 50 | 34 | 18 | 0.74 | 0.60 | 4 / 26 | 11 | 8 |
+| 4 | **1.1** | **69** | **15** | **6** | **0.92** | **0.82** | **18 / 26** | **5** | **1** |
+
+Contribution of each part (1 line per call): new prompt only 0.63 recall → + candidates 0.77 → + second look 0.86. Translations judged correct: 0.88–0.94 in 1.1 vs 0.92–0.94 in 1.0 (keyword check against accepted Spanish equivalents; 1.1 translates many more items, including harder ones). Latency per line: ~1.3 s, as before.
+
+The gain does not depend on the model: with the same benchmark, `gemma3:4b` goes from 0.50 to 0.87 recall (best translations, 0.99, but 5 s per line), `qwen2.5:3b` from 0.34 to 0.77 and `mistral:7b` from 0.49 to 0.80. **No fine-tuning**: prompt + processing already fix the problem for every model tested, and training an 8 B model is not practical on a 4 GB laptop GPU; the remaining misses are mostly single domain words (*merger*, *aides*) and partial idioms.
+
 **Ollama connection.** The client connects to `127.0.0.1` rather than `localhost`: on Windows, `localhost` tries IPv6 first and every request paid a ~2 s timeout before falling back. This alone cut start-up from ~5 s to instant and every LLM call by ~2 s.
 
 **OCR — Windows.Media.Ocr.** Built into Windows, no binaries or models to install, 15–35 ms per band with preprocessing, very accurate on large clean text. Tesseract needs an external install and does worse on video; EasyOCR/PaddleOCR need multi-GB frameworks and are slow on CPU. Isolating bright white/yellow pixels removes the video background: in tests OCR went from 170 ms with errors to 16 ms with exact text.
