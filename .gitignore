@@ -18,3 +18,6 @@ config.json
 # Build
 build/
 dist/
+
+# Registros (en cualquier carpeta)
+*.log
