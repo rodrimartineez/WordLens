@@ -274,8 +274,11 @@ def test_undo_keeps_the_decision_pending_until_it_expires(ui, monkeypatch):
     assert WordWriter(tmp / "Vocab.docx").read_expressions() == ["deal"]
 
 
-def test_keyboard_navigation_and_actions(ui):
+def test_keyboard_navigation_and_actions(ui, monkeypatch):
     app, win, tmp = ui
+    from wordlens.ui import review as review_mod
+    # Pasar el ratón por una fila la selecciona: que el puntero real no interfiera con el teclado.
+    monkeypatch.setattr(review_mod._Row, "_hover", lambda self, _e: None)
     seed(app, "brush off", "concern", "deal")
     win.open_review()
     pump(win)

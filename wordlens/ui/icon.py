@@ -1,25 +1,46 @@
-"""Icono de WordLens: una lupa sobre líneas de subtítulo, en un cuadrado redondeado.
+"""Icono de WordLens: una lupa con la W dentro y un mango de pie cuya base son dos L espejadas.
 
-Se dibuja por código (sin archivos de diseño) para poder regenerarlo:
+Simétrico, de trazo blanco uniforme y redondeado sobre un degradado radial (verde azulado en el
+centro, índigo hacia los bordes). Se dibuja por código para poder regenerarlo:
     python tools/make_icon.py   ->  assets/wordlens.ico, assets/wordlens.png
-En tamaños pequeños (<= 24 px) se simplifica para que siga siendo legible.
+En tamaños pequeños (<= 24 px) los trazos son más gruesos para que siga siendo legible.
 """
 
 from __future__ import annotations
 
 from PIL import Image, ImageDraw
 
-BRAND_TOP = (99, 102, 241)  # índigo
-BRAND_BOTTOM = (20, 184, 166)  # verde azulado
+# Paradas del degradado radial (posición 0..1 desde el centro, color).
+GRADIENT_STOPS = ((0.0, (45, 212, 191)), (0.45, (91, 108, 240)), (1.0, (46, 42, 143)))
 ICO_SIZES = (16, 20, 24, 32, 40, 48, 64, 128, 256)
 
 
+def _radial_color(t: float) -> tuple[int, int, int]:
+    t = min(1.0, t)
+    for (t0, c0), (t1, c1) in zip(GRADIENT_STOPS, GRADIENT_STOPS[1:]):
+        if t <= t1:
+            k = (t - t0) / (t1 - t0)
+            return tuple(round(a + (b - a) * k) for a, b in zip(c0, c1))
+    return GRADIENT_STOPS[-1][1]
+
+
 def _gradient(size: int) -> Image.Image:
-    grad = Image.new("RGB", (1, size))
-    for y in range(size):
-        t = y / max(1, size - 1)
-        grad.putpixel((0, y), tuple(round(a + (b - a) * t) for a, b in zip(BRAND_TOP, BRAND_BOTTOM)))
-    return grad.resize((size, size))
+    """Degradado radial centrado algo por encima del medio (se calcula pequeño y se escala: es suave)."""
+    n = min(size, 128)
+    grad = Image.new("RGB", (n, n))
+    cx, cy, reach = n * 0.5, n * 0.45, n * 0.7
+    for y in range(n):
+        for x in range(n):
+            grad.putpixel((x, y), _radial_color(((x + 0.5 - cx) ** 2 + (y + 0.5 - cy) ** 2) ** 0.5 / reach))
+    return grad.resize((size, size), Image.BICUBIC)
+
+
+def _stroke(d: ImageDraw.ImageDraw, points, width: float) -> None:
+    """Polilínea blanca con uniones y extremos redondeados."""
+    white = (255, 255, 255, 255)
+    d.line(points, fill=white, width=round(width), joint="curve")
+    for x, y in points:
+        d.ellipse((x - width / 2, y - width / 2, x + width / 2, y + width / 2), fill=white)
 
 
 def render_icon(size: int) -> Image.Image:
@@ -27,29 +48,21 @@ def render_icon(size: int) -> Image.Image:
     s = size * 4
     small = size <= 24
     mask = Image.new("L", (s, s), 0)
-    radius = int(s * (0.2 if small else 0.22))
-    ImageDraw.Draw(mask).rounded_rectangle((0, 0, s - 1, s - 1), radius=radius, fill=255)
+    ImageDraw.Draw(mask).rounded_rectangle((0, 0, s - 1, s - 1), radius=int(s * (0.2 if small else 0.24)), fill=255)
     img = Image.new("RGBA", (s, s), (0, 0, 0, 0))
     img.paste(_gradient(s), (0, 0), mask)
     d = ImageDraw.Draw(img)
-    white = (255, 255, 255, 255)
+    u = s / 100  # rejilla de 100 unidades
+    ring, letter = (9, 8) if small else (7, 6)
 
-    # Lupa: aro + mango.
-    cx, cy, r = s * 0.44, s * 0.42, s * (0.25 if small else 0.235)
-    ring = s * (0.085 if small else 0.06)
-    d.ellipse((cx - r, cy - r, cx + r, cy + r), outline=white, width=int(ring))
-    hx, hy = cx + r * 0.72, cy + r * 0.72
-    d.line((hx, hy, s * 0.80, s * 0.80), fill=white, width=int(ring * 1.35))
-    d.ellipse((s * 0.80 - ring * 0.67, s * 0.80 - ring * 0.67, s * 0.80 + ring * 0.67, s * 0.80 + ring * 0.67), fill=white)
-
-    # Dentro de la lupa: dos líneas de "subtítulo" (sólo en tamaños grandes).
-    if not small:
-        lw = int(s * 0.04)
-        for dy, half in ((-0.055, 0.11), (0.055, 0.07)):
-            y = cy + s * dy
-            d.line((cx - s * half, y, cx + s * half, y), fill=white, width=lw)
-            for x in (cx - s * half, cx + s * half):
-                d.ellipse((x - lw / 2, y - lw / 2, x + lw / 2, y + lw / 2), fill=white)
+    # Lente.
+    cx, cy, r = 50 * u, 42 * u, 24 * u
+    d.ellipse((cx - r, cy - r, cx + r, cy + r), outline=(255, 255, 255, 255), width=round(ring * u))
+    # W dentro de la lente.
+    _stroke(d, [(x * u, y * u) for x, y in ((39, 35), (44.5, 50), (50, 41), (55.5, 50), (61, 35))], letter * u)
+    # Mango de pie y base: dos L espejadas.
+    _stroke(d, [(50 * u, 66 * u), (50 * u, 80 * u)], ring * u)
+    _stroke(d, [(40 * u, 80 * u), (60 * u, 80 * u)], ring * u)
     return img.resize((size, size), Image.LANCZOS)
 
 
