@@ -64,8 +64,8 @@ Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags
 Type: filesandordirs; Name: "{app}"
 
 [CustomMessages]
-english.DeleteUserData=Do you also want to delete WordLens settings, logs and backups?
-spanish.DeleteUserData=¿Quieres borrar también la configuración, los registros y las copias de seguridad de WordLens?
+english.DeleteUserData=Do you also want to delete WordLens data (settings, accepted and excluded vocabulary, words pending review, logs and backups)?
+spanish.DeleteUserData=¿Quieres borrar también los datos de WordLens (configuración, vocabulario aceptado y excluido, palabras pendientes de revisar, registros y copias de seguridad)?
 english.DocumentKept=Your vocabulary document is NOT deleted.
 spanish.DocumentKept=Tu documento de vocabulario NO se borra.
 

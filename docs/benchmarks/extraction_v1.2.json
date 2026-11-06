@@ -1,0 +1,846 @@
+{
+ "label": "v1.2-final",
+ "impl": "C:\\Documentos\\Proyectos\\WordLens",
+ "model": "maternion/ling-3.0-tiny:8b",
+ "summary": {
+  "lines": 50,
+  "expected": 124,
+  "found": 119,
+  "missed": 5,
+  "recall": 0.96,
+  "false_positives": 6,
+  "precision": 0.952,
+  "forbidden": 3,
+  "duplicates": 0,
+  "complete_lines": 46,
+  "seconds_per_line": 2.08
+ },
+ "cases": [
+  {
+   "id": "e01",
+   "text": "He brushed off my concerns and went ahead with the deal.",
+   "expected": 4,
+   "tp": 4,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "brush off",
+    "concern",
+    "go ahead with",
+    "deal"
+   ],
+   "seconds": 2.75
+  },
+  {
+   "id": "e02",
+   "text": "I can't put up with this anymore.",
+   "expected": 1,
+   "tp": 1,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "put up with",
+    "anymore"
+   ],
+   "seconds": 1.57
+  },
+  {
+   "id": "e03",
+   "text": "You really hit the nail on the head.",
+   "expected": 1,
+   "tp": 1,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "hit the nail on the head"
+   ],
+   "seconds": 1.93
+  },
+  {
+   "id": "e04",
+   "text": "I have to go to the television store.",
+   "expected": 2,
+   "tp": 2,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "go",
+    "television",
+    "store"
+   ],
+   "seconds": 1.85
+  },
+  {
+   "id": "e05",
+   "text": "Don't give up, you're almost there.",
+   "expected": 1,
+   "tp": 1,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "give up",
+    "almost"
+   ],
+   "seconds": 1.56
+  },
+  {
+   "id": "e06",
+   "text": "After hours of arguing, he finally gave in.",
+   "expected": 4,
+   "tp": 4,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "arguing",
+    "give in",
+    "hour",
+    "finally"
+   ],
+   "seconds": 1.53
+  },
+  {
+   "id": "e07",
+   "text": "That movie was sick, dude!",
+   "expected": 3,
+   "tp": 3,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "sick",
+    "dude",
+    "movie"
+   ],
+   "seconds": 1.53
+  },
+  {
+   "id": "e08",
+   "text": "I'm broke until payday, so I'll take a rain check.",
+   "expected": 3,
+   "tp": 3,
+   "missed": [],
+   "false_positives": [
+    "take"
+   ],
+   "forbidden": [
+    "take"
+   ],
+   "duplicates": [],
+   "predicted": [
+    "broke",
+    "rain check",
+    "payday",
+    "take"
+   ],
+   "seconds": 2.29
+  },
+  {
+   "id": "e09",
+   "text": "Stop beating around the bush and tell me what happened.",
+   "expected": 4,
+   "tp": 4,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "beat around the bush",
+    "tell",
+    "happened",
+    "stop"
+   ],
+   "seconds": 1.94
+  },
+  {
+   "id": "e10",
+   "text": "The meeting was called off because of the storm.",
+   "expected": 3,
+   "tp": 3,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "call off",
+    "meeting",
+    "storm"
+   ],
+   "seconds": 2.4
+  },
+  {
+   "id": "e11",
+   "text": "She runs a small bakery downtown.",
+   "expected": 4,
+   "tp": 4,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "run",
+    "bakery",
+    "downtown",
+    "small"
+   ],
+   "seconds": 2.4
+  },
+  {
+   "id": "e12",
+   "text": "Keep an eye on the kids while I grab some groceries.",
+   "expected": 4,
+   "tp": 4,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "keep an eye on",
+    "kid",
+    "grab",
+    "grocery"
+   ],
+   "seconds": 3.46
+  },
+  {
+   "id": "e13",
+   "text": "We ran out of milk, so I'm heading to the shop.",
+   "expected": 4,
+   "tp": 4,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "run out of",
+    "milk",
+    "heading",
+    "shop"
+   ],
+   "seconds": 3.11
+  },
+  {
+   "id": "e14",
+   "text": "He's such a jerk, I can't stand him.",
+   "expected": 2,
+   "tp": 2,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "jerk",
+    "stand"
+   ],
+   "seconds": 2.58
+  },
+  {
+   "id": "e15",
+   "text": "Honestly, I couldn't care less about the gossip.",
+   "expected": 3,
+   "tp": 3,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "couldn't care less",
+    "gossip",
+    "honestly"
+   ],
+   "seconds": 1.94
+  },
+  {
+   "id": "e16",
+   "text": "It's raining cats and dogs, so grab an umbrella.",
+   "expected": 3,
+   "tp": 3,
+   "missed": [],
+   "false_positives": [
+    "grab an umbrella"
+   ],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "rain cats and dogs",
+    "grab an umbrella",
+    "grab",
+    "umbrella"
+   ],
+   "seconds": 2.15
+  },
+  {
+   "id": "e17",
+   "text": "She made a decision without asking anyone.",
+   "expected": 2,
+   "tp": 2,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "make a decision",
+    "make",
+    "decision",
+    "ask"
+   ],
+   "seconds": 2.01
+  },
+  {
+   "id": "e18",
+   "text": "The landlord refused to fix the leaking faucet.",
+   "expected": 5,
+   "tp": 5,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "landlord",
+    "refuse",
+    "fix",
+    "leaking",
+    "faucet"
+   ],
+   "seconds": 3.1
+  },
+  {
+   "id": "e19",
+   "text": "Quit whining and get to work.",
+   "expected": 3,
+   "tp": 3,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "quit",
+    "whining",
+    "get to work",
+    "get",
+    "work"
+   ],
+   "seconds": 2.1
+  },
+  {
+   "id": "e20",
+   "text": "He finally owned up to his mistake.",
+   "expected": 3,
+   "tp": 3,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "own up to",
+    "mistake",
+    "finally"
+   ],
+   "seconds": 1.75
+  },
+  {
+   "id": "e21",
+   "text": "I'm still on the fence about moving abroad.",
+   "expected": 3,
+   "tp": 3,
+   "missed": [],
+   "false_positives": [
+    "moving abroad"
+   ],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "on the fence",
+    "moving abroad",
+    "still",
+    "move",
+    "abroad"
+   ],
+   "seconds": 1.74
+  },
+  {
+   "id": "e22",
+   "text": "We had heavy rain all night.",
+   "expected": 2,
+   "tp": 2,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "heavy rain",
+    "heavy",
+    "rain",
+    "night"
+   ],
+   "seconds": 1.58
+  },
+  {
+   "id": "e23",
+   "text": "My dad was a heavy smoker for years.",
+   "expected": 3,
+   "tp": 3,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "heavy smoker",
+    "dad",
+    "heavy",
+    "smoker",
+    "year"
+   ],
+   "seconds": 1.61
+  },
+  {
+   "id": "e24",
+   "text": "Look it up in the dictionary.",
+   "expected": 2,
+   "tp": 2,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "look up",
+    "dictionary"
+   ],
+   "seconds": 1.66
+  },
+  {
+   "id": "e25",
+   "text": "Things are finally looking up.",
+   "expected": 3,
+   "tp": 3,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "look up",
+    "thing",
+    "finally"
+   ],
+   "seconds": 4.96
+  },
+  {
+   "id": "e26",
+   "text": "Wow, that was a close call.",
+   "expected": 1,
+   "tp": 1,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "close call"
+   ],
+   "seconds": 2.53
+  },
+  {
+   "id": "e27",
+   "text": "Fair enough, let's do it your way.",
+   "expected": 2,
+   "tp": 2,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "fair enough",
+    "let",
+    "way"
+   ],
+   "seconds": 2.21
+  },
+  {
+   "id": "e28",
+   "text": "No way I'm going in there.",
+   "expected": 1,
+   "tp": 1,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "no way",
+    "go"
+   ],
+   "seconds": 2.19
+  },
+  {
+   "id": "e29",
+   "text": "He bailed on us at the last minute.",
+   "expected": 2,
+   "tp": 1,
+   "missed": [
+    "at the last minute"
+   ],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "bail on",
+    "last",
+    "minute"
+   ],
+   "seconds": 2.27
+  },
+  {
+   "id": "e30",
+   "text": "Hang on a second, I'll get my coat.",
+   "expected": 2,
+   "tp": 2,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "hang on",
+    "coat",
+    "second",
+    "get"
+   ],
+   "seconds": 3.04
+  },
+  {
+   "id": "e31",
+   "text": "The witness was adamant that she never saw the defendant.",
+   "expected": 4,
+   "tp": 4,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "adamant",
+    "witness",
+    "defendant",
+    "never",
+    "saw"
+   ],
+   "seconds": 3.21
+  },
+  {
+   "id": "e32",
+   "text": "This apartment is a total dump.",
+   "expected": 2,
+   "tp": 2,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "dump",
+    "apartment",
+    "total"
+   ],
+   "seconds": 1.42
+  },
+  {
+   "id": "e33",
+   "text": "Oh, it's you.",
+   "expected": 0,
+   "tp": 0,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [],
+   "seconds": 0.0
+  },
+  {
+   "id": "e34",
+   "text": "Yes, I know.",
+   "expected": 0,
+   "tp": 0,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "know"
+   ],
+   "seconds": 1.43
+  },
+  {
+   "id": "e35",
+   "text": "What are you doing here?",
+   "expected": 0,
+   "tp": 0,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [],
+   "seconds": 0.0
+  },
+  {
+   "id": "e36",
+   "text": "Tbe negotiations stalled over the weekend.",
+   "expected": 3,
+   "tp": 3,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "stalled",
+    "negotiation",
+    "weekend"
+   ],
+   "seconds": 2.59
+  },
+  {
+   "id": "e37",
+   "text": "SHE TOTALLY NAILED THE INTERVIEW!!",
+   "expected": 3,
+   "tp": 1,
+   "missed": [
+    "nail",
+    "interview"
+   ],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "nail the interview",
+    "totally"
+   ],
+   "seconds": 2.52
+  },
+  {
+   "id": "e38",
+   "text": "Gotta go, catch you later.",
+   "expected": 1,
+   "tp": 1,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "gotta go",
+    "catch you later",
+    "gotta",
+    "go"
+   ],
+   "seconds": 2.15
+  },
+  {
+   "id": "e39",
+   "text": "I need to brush up on my French before the trip.",
+   "expected": 2,
+   "tp": 2,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "brush up on",
+    "trip",
+    "need"
+   ],
+   "seconds": 2.3
+  },
+  {
+   "id": "e40",
+   "text": "Let go of my hand, you creep!",
+   "expected": 3,
+   "tp": 3,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "let go",
+    "creep",
+    "hand"
+   ],
+   "seconds": 1.96
+  },
+  {
+   "id": "e41",
+   "text": "The plan backfired and they got fired.",
+   "expected": 3,
+   "tp": 2,
+   "missed": [
+    "get fired"
+   ],
+   "false_positives": [
+    "fired"
+   ],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "backfire",
+    "fired",
+    "plan",
+    "get"
+   ],
+   "seconds": 1.86
+  },
+  {
+   "id": "e42",
+   "text": "Can you give me a hand with these boxes?",
+   "expected": 2,
+   "tp": 2,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "give a hand",
+    "box"
+   ],
+   "seconds": 2.02
+  },
+  {
+   "id": "e43",
+   "text": "I'm so done with this job.",
+   "expected": 2,
+   "tp": 1,
+   "missed": [
+    "be done with"
+   ],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "job"
+   ],
+   "seconds": 1.87
+  },
+  {
+   "id": "e44",
+   "text": "Sarah, grab your jacket, we're leaving.",
+   "expected": 3,
+   "tp": 3,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "grab",
+    "jacket",
+    "leave"
+   ],
+   "seconds": 1.89
+  },
+  {
+   "id": "e45",
+   "text": "Mike said that Sarah was scared.",
+   "expected": 2,
+   "tp": 2,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "say",
+    "scared"
+   ],
+   "seconds": 2.07
+  },
+  {
+   "id": "e46",
+   "text": "They're cutting corners to save money.",
+   "expected": 3,
+   "tp": 3,
+   "missed": [],
+   "false_positives": [
+    "cut",
+    "corner"
+   ],
+   "forbidden": [
+    "cut",
+    "corner"
+   ],
+   "duplicates": [],
+   "predicted": [
+    "cutting corners",
+    "money",
+    "cut",
+    "corner",
+    "save"
+   ],
+   "seconds": 1.82
+  },
+  {
+   "id": "e47",
+   "text": "She's got a crush on her neighbour.",
+   "expected": 2,
+   "tp": 2,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "crush",
+    "get",
+    "neighbour"
+   ],
+   "seconds": 1.2
+  },
+  {
+   "id": "e48",
+   "text": "He's a pain in the neck, but he means well.",
+   "expected": 2,
+   "tp": 2,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "pain in the neck",
+    "means well"
+   ],
+   "seconds": 1.92
+  },
+  {
+   "id": "e49",
+   "text": "I was kidding, chill out!",
+   "expected": 2,
+   "tp": 2,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "chill out",
+    "kidding"
+   ],
+   "seconds": 1.93
+  },
+  {
+   "id": "e50",
+   "text": "The village is pretty remote and the roads are awful.",
+   "expected": 5,
+   "tp": 5,
+   "missed": [],
+   "false_positives": [],
+   "forbidden": [],
+   "duplicates": [],
+   "predicted": [
+    "remote",
+    "road",
+    "awful",
+    "village",
+    "pretty"
+   ],
+   "seconds": 2.3
+  }
+ ]
+}

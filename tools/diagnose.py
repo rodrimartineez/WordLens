@@ -116,7 +116,7 @@ def check_ollama(settings, skip_llm: bool):
     print("   Cargando el modelo y analizando una frase (la primera vez puede tardar ~1 min)...")
     t0 = time.perf_counter()
     items = VocabularyAnalyzer(settings, client).analyze(["I couldn't figure out what he was getting at."])
-    print(f"   {time.perf_counter() - t0:.1f}s -> {[(i.expression, i.translation) for i in items]}")
+    print(f"   {time.perf_counter() - t0:.1f}s -> {[(i.expression, i.kind) for i in items]}")
     if any(i.expression == "figure out" for i in items):
         print(f"{OK} El LLM detecta 'figure out'")
     else:

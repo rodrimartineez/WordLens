@@ -1,28 +1,33 @@
-"""Frases de subtítulo -> elementos de vocabulario validados.
+"""Frases de subtítulo -> candidatos de vocabulario (sin traducir).
 
-1. Primera pasada: el LLM recorre cada línea entera (con pistas de candidatos)
-   y devuelve todas las unidades que merecen aprenderse.
-2. Segunda pasada (sólo si hace falta): las palabras poco frecuentes de la
-   línea que el modelo no llegó a evaluar se le presentan una a una. Corrige el
-   fallo típico del modelo pequeño: quedarse con el primer elemento o devolver
-   una lista vacía en una línea que sí tiene vocabulario avanzado.
-3. Todo pasa por validate_item(); si una unidad contiene a otra de la misma
-   línea ("come back" / "come back to bite"), se queda la más larga.
+Extracción exhaustiva en dos fuentes que se consolidan:
+
+1. Modelo (Ollama, el de siempre): lista cada expresión con significado propio
+   (phrasal verbs, modismos, colocaciones, expresiones coloquiales) y cada
+   palabra de contenido en forma de diccionario. Todo pasa por
+   validate_candidate(): debe estar en la línea y no ser gramática.
+2. Reglas (vocabulary/lexicon.py): todas las palabras de contenido de la línea.
+   Es la red de seguridad: si el modelo se salta una palabra, se propone igual.
+   Una palabra que ya forma parte de una expresión detectada no se repite
+   ("brushed off" -> "brush off", no también "brush").
+
+Nada se descarta por dificultad o interés: decide el usuario al revisar.
 """
 
 from __future__ import annotations
 
 import logging
 import time
+from difflib import SequenceMatcher
 
 from wordlens.config.settings import Settings
-from wordlens.vocabulary.candidates import find_candidates
-from wordlens.vocabulary.extractor import is_trivial_line, parse_llm_json, validate_item
-from wordlens.vocabulary.models import VocabularyItem
-from wordlens.vocabulary.normalization import dedup_key, lemma, tokenize
+from wordlens.vocabulary.extractor import parse_llm_response, validate_candidate
+from wordlens.vocabulary.lexicon import FIRST_NAMES, Token, lexical_words, names_in, tokens, word_lemma
+from wordlens.vocabulary.models import Candidate
+from wordlens.vocabulary.normalization import entry_key, lemma
 
 from .ollama_client import OllamaClient
-from .prompts import RESPONSE_SCHEMA, build_messages, build_review_messages
+from .prompts import RESPONSE_SCHEMA, build_messages
 
 log = logging.getLogger(__name__)
 
@@ -31,133 +36,161 @@ class VocabularyAnalyzer:
     def __init__(self, settings: Settings, client: OllamaClient | None = None) -> None:
         self.settings = settings
         self.client = client or OllamaClient(settings.ollama_url, settings.ollama_timeout_seconds)
+        # Nombres propios vistos en la sesión: "Sarah" a principio de frase no se
+        # puede distinguir de una palabra, pero si ya apareció como nombre, lo es.
+        self.known_names: set[str] = set()
 
-    def analyze(self, lines: list[str]) -> list[VocabularyItem]:
-        """Envía un lote de frases al LLM y devuelve sólo elementos válidos.
+    def analyze(self, lines: list[str]) -> list[Candidate]:
+        """Candidatos de un lote de líneas, en orden de aparición.
 
-        Lanza OllamaError si el servidor falla; nunca por una respuesta mal formada.
+        Lanza OllamaError si el modelo no responde (quien llama conserva las
+        líneas y reintenta); una respuesta mal formada nunca lanza.
         """
         s = self.settings
+        lang = s.source_code
         lines = [ln.strip() for ln in lines if ln and ln.strip()]
-        if s.prefilter_trivial_lines:
-            skipped = [ln for ln in lines if is_trivial_line(ln, s.source_code)]
-            if skipped:
-                log.info("Líneas triviales omitidas: %s", skipped)
-            lines = [ln for ln in lines if not is_trivial_line(ln, s.source_code)]
-        if not lines:
-            return []
-
-        messages = build_messages(
-            lines,
-            target_level=s.target_level,
-            source_language=s.source_language,
-            target_language=s.target_language,
-            hints=s.candidate_hints,
-        )
-        raw_items = self._ask(messages, lines, "LLM")
-        items = self._validate(raw_items, lines)
-
-        if s.review_pass:
-            checks = self._unreviewed(raw_items, lines)
-            if checks:
-                review = build_review_messages(
-                    checks,
-                    target_level=s.target_level,
-                    source_language=s.source_language,
-                    target_language=s.target_language,
-                )
-                checked_lines = [line for line, _ in checks]
-                extra = self._validate(self._ask(review, checked_lines, "LLM revisión"), checked_lines)
-                known = {dedup_key(i.expression, s.source_code) for i in items}
-                items += [i for i in extra if dedup_key(i.expression, s.source_code) not in known]
-        return _prefer_longest(items)
+        for line in lines:
+            self.known_names |= names_in(line)
+        # Sin palabras de contenido no puede haber vocabulario ("Oh, it's you.").
+        ask = [ln for ln in lines if lexical_words(ln, lang) or _has_particle_pair(ln)]
+        raw_items: list[dict] = []
+        if ask:
+            raw_items, names = self._ask(ask)
+            self.known_names |= {n.lower() for name in names for n in name.split()}
+        out: list[Candidate] = []
+        for i, line in enumerate(lines):
+            index = ask.index(line) + 1 if line in ask else None
+            mine = [r for r in raw_items if index is not None and _line_of(r, len(ask)) in (index, None)]
+            out += self._consolidate(line, mine)
+        return _unique(out, lang)
 
     # ------------------------------------------------------------------ pasos
-    def _ask(self, messages: list[dict[str, str]], lines: list[str], tag: str) -> list[dict]:
+    def _ask(self, lines: list[str]) -> tuple[list[dict], list[str]]:
         s = self.settings
         start = time.perf_counter()
         response = self.client.chat(
             s.ollama_model,
-            messages,
+            build_messages(lines, source_language=s.source_language, hints=s.candidate_hints),
             schema=RESPONSE_SCHEMA,
             temperature=s.temperature,
-            num_predict=160 + 160 * len(lines),  # varias unidades por línea
+            num_predict=200 + 260 * len(lines),
             keep_alive=s.ollama_keep_alive,
         )
         raw = response.get("message", {}).get("content", "")
-        log.info("%s %.1fs para %d línea(s): %s", tag, time.perf_counter() - start, len(lines), raw)
-        return parse_llm_json(raw)
+        log.info("LLM %.1fs para %d línea(s): %s", time.perf_counter() - start, len(lines), raw)
+        return parse_llm_response(raw)
 
-    def _validate(self, raw_items: list[dict], lines: list[str]) -> list[VocabularyItem]:
+    def _consolidate(self, line: str, raw_items: list[dict]) -> list[Candidate]:
         s = self.settings
-        items: list[VocabularyItem] = []
-        for raw_item in raw_items:
-            context = self._context_for(raw_item, lines)
-            item = validate_item(
-                raw_item,
-                context,
-                max_single_word_zipf=s.max_single_word_zipf,
-                max_words=s.max_expression_words,
-                grounding_text=" ".join(lines),
-                source=s.source_code,
-                target=s.target_code,
-            )
-            if item is not None:
-                items.append(item)
-        return items
+        lang = s.source_code
+        names = self.known_names
+        model: list[Candidate] = []
+        for raw in raw_items:
+            cand = validate_candidate(raw, line, max_words=s.max_expression_words, source=lang, names=names)
+            if cand is not None:
+                model.append(cand)
+        model = _prefer_longest(model)
+        line_tokens = tokens(line)
+        # Palabras sueltas del modelo que forman parte de un modismo o phrasal verb
+        # de la misma línea ("cut corners" + "corner"): la unidad es la expresión.
+        locked: set[int] = set()
+        for cand in model:
+            if cand.kind in ("phrasal verb", "idiom"):
+                locked |= _covered_by(cand.expression, line_tokens, lang)
+        model = [
+            c
+            for c in model
+            if len(c.expression.split()) > 1 or not (_covered_by(c.expression, line_tokens, lang) <= locked and locked)
+        ]
 
-    def _unreviewed(self, raw_items: list[dict], lines: list[str]) -> list[tuple[str, list[str]]]:
-        """Palabras poco frecuentes de cada línea que el modelo no ha valorado.
+        covered: set[int] = set()
+        mentioned: set[int] = set()  # palabras que el modelo ha tenido en cuenta
+        for cand in model:
+            span = _covered_by(cand.expression, line_tokens, lang)
+            mentioned |= span
+            # Un phrasal verb o un modismo sustituye a sus palabras ("brush off", no
+            # también "brush"). En una colocación o expresión ("heavy rain", "moving
+            # abroad") cada palabra sigue siendo una unidad: el modelo etiqueta como
+            # "expression" muchas combinaciones libres y ocultarlas perdería palabras.
+            if cand.kind in ("phrasal verb", "idiom") or len(cand.expression.split()) == 1:
+                covered |= span
+        extra = [
+            Candidate(tok.lemma, "word", line, origin="lexical")
+            for tok in lexical_words(line, lang, names)
+            if tok.index not in covered
+            and not (tok.capitalized and tok.index not in mentioned and _probable_name(tok))
+        ]
+        if extra:
+            log.info("Palabras añadidas por reglas en %r: %s", line, [c.expression for c in extra])
+        return model + extra
 
-        Lo que el modelo devolvió cuenta como valorado aunque el validador lo
-        descartara (un cognado, por ejemplo): no se le vuelve a preguntar.
-        """
-        lang = self.settings.source_code
-        answered: dict[int, set[str]] = {}
-        for raw_item in raw_items:
-            expression = raw_item.get("expression")
-            if not isinstance(expression, str):
+
+def _probable_name(tok: Token) -> bool:
+    """¿Es un nombre una palabra con mayúscula que el modelo no ha listado?
+
+    A principio de frase la mayúscula no distingue "Sarah" de "Honestly": sólo
+    se descarta si es un nombre de pila frecuente.
+    """
+    return tok.surface in FIRST_NAMES
+
+
+def _line_of(raw: dict, count: int) -> int | None:
+    idx = raw.get("line")
+    if isinstance(idx, int) and not isinstance(idx, bool) and 1 <= idx <= count:
+        return idx
+    return None  # sin número (o erróneo): se valida contra cada línea
+
+
+def _has_particle_pair(line: str) -> bool:
+    from wordlens.vocabulary.candidates import find_candidates
+
+    return bool(find_candidates(line).phrasal)
+
+
+def _covered_by(expression: str, line_tokens: list[Token], lang: str) -> set[int]:
+    """Posiciones de la línea que corresponden a las palabras de la expresión."""
+    covered: set[int] = set()
+    for part in expression.replace("-", " ").split():
+        for tok in line_tokens:
+            if tok.index in covered:
                 continue
-            idx = raw_item.get("line")
-            valid_idx = isinstance(idx, int) and not isinstance(idx, bool) and 1 <= idx <= len(lines)
-            targets = [idx - 1] if valid_idx else range(len(lines))
-            forms = {f for tok in tokenize(expression) for f in (tok, lemma(tok, lang))}
-            for t in targets:
-                answered.setdefault(t, set()).update(forms)
-        checks = []
-        for i, line in enumerate(lines):
-            seen = answered.get(i, set())
-            pending = [
-                w
-                for w in find_candidates(line, lang).rare_words
-                if w not in seen and lemma(w, lang) not in seen and not any(p in seen for p in w.split("-"))
-            ]
-            if pending:
-                checks.append((line, pending))
-        return checks
-
-    @staticmethod
-    def _context_for(raw_item: dict, lines: list[str]) -> str:
-        idx = raw_item.get("line")
-        if isinstance(idx, int) and not isinstance(idx, bool) and 1 <= idx <= len(lines):
-            return lines[idx - 1]
-        # Número de línea ausente o erróneo: se valida contra todo el lote.
-        return " ".join(lines)
+            forms = {tok.surface, tok.lemma, lemma(tok.surface, lang), word_lemma(tok.surface, lang)}
+            similar = (
+                len(part) >= 4
+                and tok.surface[:3] == part[:3]
+                and SequenceMatcher(None, part, tok.surface).ratio() >= 0.7
+            )
+            if part in forms or similar:
+                covered.add(tok.index)
+                break
+    return covered
 
 
-def _prefer_longest(items: list[VocabularyItem]) -> list[VocabularyItem]:
-    """Quita una unidad contenida en otra de la misma línea ("come back" ⊂ "come back to bite")."""
+def _prefer_longest(items: list[Candidate]) -> list[Candidate]:
+    """Quita una unidad contenida en otra de la misma línea ("come back" ⊂ "come back to bite").
+
+    Una palabra suelta dentro de una expresión también sobra ("nail" ⊂ "hit the
+    nail on the head"): la expresión ya la contiene.
+    """
 
     def contained(small: list[str], big: list[str]) -> bool:
         n = len(small)
         return n < len(big) and any(big[i : i + n] == small for i in range(len(big) - n + 1))
 
-    tokens = [item.expression.split() for item in items]
+    words = [item.expression.split() for item in items]
     return [
         item
         for i, item in enumerate(items)
-        if not any(
-            j != i and items[j].context == item.context and contained(tokens[i], tokens[j])
-            for j in range(len(items))
-        )
+        if not any(j != i and contained(words[i], words[j]) for j in range(len(items)))
     ]
+
+
+def _unique(items: list[Candidate], lang: str) -> list[Candidate]:
+    seen: set[str] = set()
+    out = []
+    for item in items:
+        key = entry_key(item.expression, lang)
+        if key and key not in seen:
+            seen.add(key)
+            out.append(item)
+    return out

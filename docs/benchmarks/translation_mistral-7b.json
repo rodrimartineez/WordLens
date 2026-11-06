@@ -1,0 +1,704 @@
+{
+ "engine": "ollama:mistral:7b",
+ "summary": {
+  "items": 117,
+  "correct_auto": 78,
+  "accuracy_auto": 0.667,
+  "missing": 1,
+  "seconds_total": 585.7,
+  "seconds_per_line": 7.32,
+  "by_tag": {
+   "collocation": "10/15",
+   "colloquial": "17/27",
+   "context": "9/15",
+   "idiom": "10/23",
+   "insult": "2/2",
+   "irony": "3/5",
+   "negation": "6/13",
+   "pair": "5/5",
+   "phrasal": "26/34",
+   "polysemy": "32/39",
+   "slang": "7/12",
+   "word": "5/6"
+  }
+ },
+ "runs": [
+  {
+   "id": "t01",
+   "seconds": 16.381275600288063,
+   "results": [
+    "desestimar",
+    "preocupaciones",
+    "llevar a cabo",
+    "acuerdo"
+   ],
+   "error": null
+  },
+  {
+   "id": "t02",
+   "seconds": 9.998611900024116,
+   "results": [
+    "soportarlo más"
+   ],
+   "error": null
+  },
+  {
+   "id": "t03",
+   "seconds": 6.201456600334495,
+   "results": [
+    "dar con la punta"
+   ],
+   "error": null
+  },
+  {
+   "id": "t04",
+   "seconds": 9.808435800019652,
+   "results": [
+    "no rendirse / no abandonar"
+   ],
+   "error": null
+  },
+  {
+   "id": "t05",
+   "seconds": 7.628924699965864,
+   "results": [
+    "rendirse",
+    "discutir"
+   ],
+   "error": null
+  },
+  {
+   "id": "t06",
+   "seconds": 6.970840000081807,
+   "results": [
+    "atender",
+    "cliente"
+   ],
+   "error": null
+  },
+  {
+   "id": "t07",
+   "seconds": 9.311224999837577,
+   "results": [
+    "gran cosa / nada más",
+    "fallar"
+   ],
+   "error": null
+  },
+  {
+   "id": "t08",
+   "seconds": 7.745215700007975,
+   "results": [
+    "jugar cartas en el casino"
+   ],
+   "error": null
+  },
+  {
+   "id": "t09",
+   "seconds": 7.4051308003254235,
+   "results": [
+    "reservar una mesa"
+   ],
+   "error": null
+  },
+  {
+   "id": "t10",
+   "seconds": 8.244091299828142,
+   "results": [
+    "orilla",
+    "barro"
+   ],
+   "error": null
+  },
+  {
+   "id": "t11",
+   "seconds": 7.581722599919885,
+   "results": [
+    "asqueroso",
+    "hombre"
+   ],
+   "error": null
+  },
+  {
+   "id": "t12",
+   "seconds": 8.331397600006312,
+   "results": [
+    "sin dinero",
+    "día de pago"
+   ],
+   "error": null
+  },
+  {
+   "id": "t13",
+   "seconds": 6.280999000184238,
+   "results": [
+    "tonto / bobo"
+   ],
+   "error": null
+  },
+  {
+   "id": "t14",
+   "seconds": 9.454389800317585,
+   "results": [
+    "evitar el tema / desviarse del tema"
+   ],
+   "error": null
+  },
+  {
+   "id": "t15",
+   "seconds": 8.312796999700367,
+   "results": [
+    "llover a cántaros y perros"
+   ],
+   "error": null
+  },
+  {
+   "id": "t16",
+   "seconds": 6.1648633000440896,
+   "results": [
+    "dejar salir el gato de la bolsa"
+   ],
+   "error": null
+  },
+  {
+   "id": "t17",
+   "seconds": 7.139097199775279,
+   "results": [
+    "tomar una decisión sin preguntar a nadie"
+   ],
+   "error": null
+  },
+  {
+   "id": "t18",
+   "seconds": 8.719100300222635,
+   "results": [
+    "tener en cuenta",
+    "costes"
+   ],
+   "error": null
+  },
+  {
+   "id": "t19",
+   "seconds": 5.278884699568152,
+   "results": [
+    "no es el más inteligente del grupo"
+   ],
+   "error": null
+  },
+  {
+   "id": "t20",
+   "seconds": 8.072667699772865,
+   "results": [
+    "precisamente lo que necesitaba",
+    "reunión"
+   ],
+   "error": null
+  },
+  {
+   "id": "t21",
+   "seconds": 7.1699045998975635,
+   "results": [
+    "no me importa más",
+    "opinión"
+   ],
+   "error": null
+  },
+  {
+   "id": "t22",
+   "seconds": 5.697192400228232,
+   "results": [
+    "calcular de nuevo"
+   ],
+   "error": null
+  },
+  {
+   "id": "t23",
+   "seconds": 10.591904200147837,
+   "results": [
+    "corre",
+    "panadería",
+    "centro"
+   ],
+   "error": null
+  },
+  {
+   "id": "t24",
+   "seconds": 8.194526299834251,
+   "results": [
+    "nariz mojada",
+    "garganta dolorida"
+   ],
+   "error": null
+  },
+  {
+   "id": "t25",
+   "seconds": 7.273946399800479,
+   "results": [
+    "despedido",
+    "fusión"
+   ],
+   "error": null
+  },
+  {
+   "id": "t26",
+   "seconds": 10.476820200216025,
+   "results": [
+    "dejármelo caer"
+   ],
+   "error": null
+  },
+  {
+   "id": "t27",
+   "seconds": 5.435639600269496,
+   "results": [
+    "recoger"
+   ],
+   "error": null
+  },
+  {
+   "id": "t28",
+   "seconds": 9.496266100089997,
+   "results": [
+    "aprender rápidamente"
+   ],
+   "error": null
+  },
+  {
+   "id": "t29",
+   "seconds": 6.46701299957931,
+   "results": [
+    "empiezan a mejorar"
+   ],
+   "error": null
+  },
+  {
+   "id": "t30",
+   "seconds": 7.145791599992663,
+   "results": [
+    "consultarlo en el diccionario"
+   ],
+   "error": null
+  },
+  {
+   "id": "t31",
+   "seconds": 5.989441399928182,
+   "results": [
+    "agotarnos de"
+   ],
+   "error": null
+  },
+  {
+   "id": "t32",
+   "seconds": 6.371891400311142,
+   "results": [
+    "ir por encima de la cabeza"
+   ],
+   "error": null
+  },
+  {
+   "id": "t33",
+   "seconds": 9.883939399849623,
+   "results": [
+    "abandonarnos a las últimas horas",
+    "en las últimas horas"
+   ],
+   "error": null
+  },
+  {
+   "id": "t34",
+   "seconds": 12.09114950010553,
+   "results": [
+    "quejarse",
+    "empezar a trabajar",
+    "dejar de"
+   ],
+   "error": null
+  },
+  {
+   "id": "t35",
+   "seconds": 8.204218900296837,
+   "results": [
+    "suspender",
+    "tormenta"
+   ],
+   "error": null
+  },
+  {
+   "id": "t36",
+   "seconds": 8.684809300117195,
+   "results": [
+    "comprar",
+    "intento valiente"
+   ],
+   "error": null
+  },
+  {
+   "id": "t37",
+   "seconds": 6.081906800158322,
+   "results": [
+    "no tomarlo en mí"
+   ],
+   "error": null
+  },
+  {
+   "id": "t38",
+   "seconds": 8.357057600282133,
+   "results": [
+    "confesar su error",
+    "error"
+   ],
+   "error": null
+  },
+  {
+   "id": "t39",
+   "seconds": 5.514093399979174,
+   "results": [
+    "enferma / no bien"
+   ],
+   "error": null
+  },
+  {
+   "id": "t40",
+   "seconds": 6.948779399972409,
+   "results": [
+    "cárcel / basura"
+   ],
+   "error": null
+  },
+  {
+   "id": "t41",
+   "seconds": 5.920823399908841,
+   "results": [
+    "dejar a / abandonar a"
+   ],
+   "error": null
+  },
+  {
+   "id": "t42",
+   "seconds": 6.6290883999317884,
+   "results": [
+    "que tengas suerte en la noche"
+   ],
+   "error": null
+  },
+  {
+   "id": "t43",
+   "seconds": 5.782263599801809,
+   "results": [
+    "costar una vida"
+   ],
+   "error": null
+  },
+  {
+   "id": "t44",
+   "seconds": 9.093646499793977,
+   "results": [
+    "mantener un ojo",
+    "niños"
+   ],
+   "error": null
+  },
+  {
+   "id": "t45",
+   "seconds": 8.133061700034887,
+   "results": [
+    "en el borde",
+    "en el extranjero"
+   ],
+   "error": null
+  },
+  {
+   "id": "t46",
+   "seconds": 5.81255909986794,
+   "results": [
+    "peste / molestia"
+   ],
+   "error": null
+  },
+  {
+   "id": "t47",
+   "seconds": 7.064259300008416,
+   "results": [
+    "acelerar",
+    "tardar"
+   ],
+   "error": null
+  },
+  {
+   "id": "t48",
+   "seconds": 8.36698540020734,
+   "results": [
+    "venir con una idea",
+    "genial"
+   ],
+   "error": null
+  },
+  {
+   "id": "t49",
+   "seconds": 8.364589400123805,
+   "results": [
+    "control remoto",
+    "pelearse por"
+   ],
+   "error": null
+  },
+  {
+   "id": "t50",
+   "seconds": 7.735226199962199,
+   "results": [
+    "remoto",
+    null
+   ],
+   "error": null
+  },
+  {
+   "id": "t51",
+   "seconds": 8.452010000124574,
+   "results": [
+    "enfadado",
+    "desilusionado"
+   ],
+   "error": null
+  },
+  {
+   "id": "t52",
+   "seconds": 4.818940800148994,
+   "results": [
+    "loco"
+   ],
+   "error": null
+  },
+  {
+   "id": "t53",
+   "seconds": 6.211665299721062,
+   "results": [
+    "apuro / situación peligrosa"
+   ],
+   "error": null
+  },
+  {
+   "id": "t54",
+   "seconds": 5.527228299994022,
+   "results": [
+    "tener que retrasar la cena"
+   ],
+   "error": null
+  },
+  {
+   "id": "t55",
+   "seconds": 5.735490099992603,
+   "results": [
+    "no es nada complicado"
+   ],
+   "error": null
+  },
+  {
+   "id": "t56",
+   "seconds": 5.713036899920553,
+   "results": [
+    "cortar esquinas"
+   ],
+   "error": null
+  },
+  {
+   "id": "t57",
+   "seconds": 5.930728599894792,
+   "results": [
+    "bien / así lo haremos"
+   ],
+   "error": null
+  },
+  {
+   "id": "t58",
+   "seconds": 5.429298499599099,
+   "results": [
+    "ni por una vez"
+   ],
+   "error": null
+  },
+  {
+   "id": "t59",
+   "seconds": 5.641148299910128,
+   "results": [
+    "pues / no importa"
+   ],
+   "error": null
+  },
+  {
+   "id": "t60",
+   "seconds": 5.557041400112212,
+   "results": [
+    "tener mucho que hacer"
+   ],
+   "error": null
+  },
+  {
+   "id": "t61",
+   "seconds": 7.562319700140506,
+   "results": [
+    "acertar",
+    "entrevista"
+   ],
+   "error": null
+  },
+  {
+   "id": "t62",
+   "seconds": 6.783626699820161,
+   "results": [
+    "mejorar",
+    "viaje"
+   ],
+   "error": null
+  },
+  {
+   "id": "t63",
+   "seconds": 5.783471699804068,
+   "results": [
+    "lluvia torrencial"
+   ],
+   "error": null
+  },
+  {
+   "id": "t64",
+   "seconds": 5.320074799936265,
+   "results": [
+    "fumador pesado"
+   ],
+   "error": null
+  },
+  {
+   "id": "t65",
+   "seconds": 8.28337260009721,
+   "results": [
+    "hasta luego",
+    "tengo que ir"
+   ],
+   "error": null
+  },
+  {
+   "id": "t66",
+   "seconds": 7.27761759981513,
+   "results": [
+    "espera un momento",
+    "abrigo"
+   ],
+   "error": null
+  },
+  {
+   "id": "t67",
+   "seconds": 6.224615899845958,
+   "results": [
+    "pasar la noche con sus amigos"
+   ],
+   "error": null
+  },
+  {
+   "id": "t68",
+   "seconds": 6.164355099666864,
+   "results": [
+    "estar cansado de este trabajo"
+   ],
+   "error": null
+  },
+  {
+   "id": "t69",
+   "seconds": 5.413043400272727,
+   "results": [
+    "rebotar contra ellos"
+   ],
+   "error": null
+  },
+  {
+   "id": "t70",
+   "seconds": 7.714453699998558,
+   "results": [
+    "caerse a pie",
+    "acuerdo"
+   ],
+   "error": null
+  },
+  {
+   "id": "t71",
+   "seconds": 6.424458300229162,
+   "results": [
+    "tener una venganza en mente"
+   ],
+   "error": null
+  },
+  {
+   "id": "t72",
+   "seconds": 5.775586800184101,
+   "results": [
+    "tenaz / obstinado"
+   ],
+   "error": null
+  },
+  {
+   "id": "t73",
+   "seconds": 5.624128699768335,
+   "results": [
+    "fuera de peligro"
+   ],
+   "error": null
+  },
+  {
+   "id": "t74",
+   "seconds": 7.869271200150251,
+   "results": [
+    "obstinado",
+    "testigo"
+   ],
+   "error": null
+  },
+  {
+   "id": "t75",
+   "seconds": 6.797268399968743,
+   "results": [
+    "podemos permitirnos un coche nuevo este año"
+   ],
+   "error": null
+  },
+  {
+   "id": "t76",
+   "seconds": 7.30485269986093,
+   "results": [
+    "estancar",
+    "negociaciones"
+   ],
+   "error": null
+  },
+  {
+   "id": "t77",
+   "seconds": 5.949661700055003,
+   "results": [
+    "tener una pasión por"
+   ],
+   "error": null
+  },
+  {
+   "id": "t78",
+   "seconds": 8.120322899892926,
+   "results": [
+    "ayúdame",
+    "cajas"
+   ],
+   "error": null
+  },
+  {
+   "id": "t79",
+   "seconds": 6.356485099997371,
+   "results": [
+    "aplaude a ella con entusiasmo"
+   ],
+   "error": null
+  },
+  {
+   "id": "t80",
+   "seconds": 5.890092699788511,
+   "results": [
+    "encendido / animado"
+   ],
+   "error": null
+  }
+ ]
+}

@@ -1,0 +1,704 @@
+{
+ "engine": "ollama:qwen2.5:3b",
+ "summary": {
+  "items": 117,
+  "correct_auto": 65,
+  "accuracy_auto": 0.556,
+  "missing": 1,
+  "seconds_total": 44.3,
+  "seconds_per_line": 0.55,
+  "by_tag": {
+   "collocation": "9/15",
+   "colloquial": "12/27",
+   "context": "8/15",
+   "idiom": "6/23",
+   "insult": "0/2",
+   "irony": "2/5",
+   "negation": "7/13",
+   "pair": "3/5",
+   "phrasal": "24/34",
+   "polysemy": "27/39",
+   "slang": "3/12",
+   "word": "5/6"
+  }
+ },
+ "runs": [
+  {
+   "id": "t01",
+   "seconds": 1.3920219000428915,
+   "results": [
+    "ignorar",
+    "preocupaciones",
+    "proseguir con",
+    "trato"
+   ],
+   "error": null
+  },
+  {
+   "id": "t02",
+   "seconds": 0.607901499606669,
+   "results": [
+    "soportar"
+   ],
+   "error": null
+  },
+  {
+   "id": "t03",
+   "seconds": 0.367053700145334,
+   "results": [
+    "acertar al blanco"
+   ],
+   "error": null
+  },
+  {
+   "id": "t04",
+   "seconds": 0.5338738998398185,
+   "results": [
+    "abandonar"
+   ],
+   "error": null
+  },
+  {
+   "id": "t05",
+   "seconds": 0.5006155003793538,
+   "results": [
+    "rendirse",
+    "argumentar"
+   ],
+   "error": null
+  },
+  {
+   "id": "t06",
+   "seconds": 0.5315510001964867,
+   "results": [
+    "manejar",
+    "cliente"
+   ],
+   "error": null
+  },
+  {
+   "id": "t07",
+   "seconds": 0.5153716001659632,
+   "results": [
+    "paja",
+    "fallar"
+   ],
+   "error": null
+  },
+  {
+   "id": "t08",
+   "seconds": 0.4938403000123799,
+   "results": [
+    "dar"
+   ],
+   "error": null
+  },
+  {
+   "id": "t09",
+   "seconds": 0.5202838000841439,
+   "results": [
+    "reservar"
+   ],
+   "error": null
+  },
+  {
+   "id": "t10",
+   "seconds": 0.5046529998071492,
+   "results": [
+    "orilla",
+    "barro"
+   ],
+   "error": null
+  },
+  {
+   "id": "t11",
+   "seconds": 0.5048198001459241,
+   "results": [
+    "malo",
+    "guapo"
+   ],
+   "error": null
+  },
+  {
+   "id": "t12",
+   "seconds": 0.5127924997359514,
+   "results": [
+    "sin dinero",
+    "fecha de pago"
+   ],
+   "error": null
+  },
+  {
+   "id": "t13",
+   "seconds": 0.5306290998123586,
+   "results": [
+    "culpable"
+   ],
+   "error": null
+  },
+  {
+   "id": "t14",
+   "seconds": 0.5530854999087751,
+   "results": [
+    "evitar el punto"
+   ],
+   "error": null
+  },
+  {
+   "id": "t15",
+   "seconds": 0.6358929998241365,
+   "results": [
+    "llover a cántaros"
+   ],
+   "error": null
+  },
+  {
+   "id": "t16",
+   "seconds": 0.4324356000870466,
+   "results": [
+    "dejar al gato por la borda"
+   ],
+   "error": null
+  },
+  {
+   "id": "t17",
+   "seconds": 0.5617658998817205,
+   "results": [
+    "tomar una decisión"
+   ],
+   "error": null
+  },
+  {
+   "id": "t18",
+   "seconds": 0.5428621997125447,
+   "results": [
+    "tener en cuenta",
+    "costos"
+   ],
+   "error": null
+  },
+  {
+   "id": "t19",
+   "seconds": 0.6733536999672651,
+   "results": [
+    "no es la herramienta más afilada"
+   ],
+   "error": null
+  },
+  {
+   "id": "t20",
+   "seconds": 0.5843699998222291,
+   "results": [
+    "lo último que necesitaba",
+    "reunión"
+   ],
+   "error": null
+  },
+  {
+   "id": "t21",
+   "seconds": 0.5515507999807596,
+   "results": [
+    "no importa nada",
+    "opinión"
+   ],
+   "error": null
+  },
+  {
+   "id": "t22",
+   "seconds": 0.3832125002518296,
+   "results": [
+    "repetir los cálculos"
+   ],
+   "error": null
+  },
+  {
+   "id": "t23",
+   "seconds": 0.774494799785316,
+   "results": [
+    "dirigir",
+    "panadería",
+    "en el centro de la ciudad"
+   ],
+   "error": null
+  },
+  {
+   "id": "t24",
+   "seconds": 0.5651835002936423,
+   "results": [
+    "resaca",
+    "garganta pesada"
+   ],
+   "error": null
+  },
+  {
+   "id": "t25",
+   "seconds": 0.5154281998984516,
+   "results": [
+    "despedir",
+    null
+   ],
+   "error": null
+  },
+  {
+   "id": "t26",
+   "seconds": 0.5265521998517215,
+   "results": [
+    "sueltar"
+   ],
+   "error": null
+  },
+  {
+   "id": "t27",
+   "seconds": 0.5239803004078567,
+   "results": [
+    "recoger"
+   ],
+   "error": null
+  },
+  {
+   "id": "t28",
+   "seconds": 0.5184344998560846,
+   "results": [
+    "aprender"
+   ],
+   "error": null
+  },
+  {
+   "id": "t29",
+   "seconds": 0.581186099909246,
+   "results": [
+    "parecerse a"
+   ],
+   "error": null
+  },
+  {
+   "id": "t30",
+   "seconds": 0.30894740018993616,
+   "results": [
+    "consultar"
+   ],
+   "error": null
+  },
+  {
+   "id": "t31",
+   "seconds": 0.543232399970293,
+   "results": [
+    "agotar"
+   ],
+   "error": null
+  },
+  {
+   "id": "t32",
+   "seconds": 0.35590429976582527,
+   "results": [
+    "pasar por alto"
+   ],
+   "error": null
+  },
+  {
+   "id": "t33",
+   "seconds": 0.5624358998611569,
+   "results": [
+    "abandonar",
+    "último momento"
+   ],
+   "error": null
+  },
+  {
+   "id": "t34",
+   "seconds": 0.7414760002866387,
+   "results": [
+    "quejarse",
+    "ir a trabajar",
+    "dejar de"
+   ],
+   "error": null
+  },
+  {
+   "id": "t35",
+   "seconds": 0.532462100032717,
+   "results": [
+    "anular",
+    "tormenta"
+   ],
+   "error": null
+  },
+  {
+   "id": "t36",
+   "seconds": 0.5706079001538455,
+   "results": [
+    "creer",
+    "buen intento / buena idea"
+   ],
+   "error": null
+  },
+  {
+   "id": "t37",
+   "seconds": 0.5856309002265334,
+   "results": [
+    "ponerse en contra de"
+   ],
+   "error": null
+  },
+  {
+   "id": "t38",
+   "seconds": 0.5002699000760913,
+   "results": [
+    "confesar",
+    "error"
+   ],
+   "error": null
+  },
+  {
+   "id": "t39",
+   "seconds": 0.33594739995896816,
+   "results": [
+    "mal de un día"
+   ],
+   "error": null
+  },
+  {
+   "id": "t40",
+   "seconds": 0.5481342002749443,
+   "results": [
+    "desastre"
+   ],
+   "error": null
+  },
+  {
+   "id": "t41",
+   "seconds": 0.5291385999880731,
+   "results": [
+    "abandonar"
+   ],
+   "error": null
+  },
+  {
+   "id": "t42",
+   "seconds": 1.3482015999034047,
+   "results": [
+    "¡dale / que cuaje!"
+   ],
+   "error": null
+  },
+  {
+   "id": "t43",
+   "seconds": 0.417554700281471,
+   "results": [
+    "cuesta un ojo de la cara"
+   ],
+   "error": null
+  },
+  {
+   "id": "t44",
+   "seconds": 0.7089431998319924,
+   "results": [
+    "mirar",
+    "niños"
+   ],
+   "error": null
+  },
+  {
+   "id": "t45",
+   "seconds": 0.5443196003325284,
+   "results": [
+    "incómodo",
+    "foráneo"
+   ],
+   "error": null
+  },
+  {
+   "id": "t46",
+   "seconds": 0.531990900170058,
+   "results": [
+    "molesta"
+   ],
+   "error": null
+  },
+  {
+   "id": "t47",
+   "seconds": 0.5361727997660637,
+   "results": [
+    "apresurarse",
+    "estar tarde"
+   ],
+   "error": null
+  },
+  {
+   "id": "t48",
+   "seconds": 0.5920182000845671,
+   "results": [
+    "llegar a",
+    "brillante / genial"
+   ],
+   "error": null
+  },
+  {
+   "id": "t49",
+   "seconds": 0.5473625999875367,
+   "results": [
+    "reproductor",
+    "luchar por"
+   ],
+   "error": null
+  },
+  {
+   "id": "t50",
+   "seconds": 0.5244877003133297,
+   "results": [
+    "remoto",
+    "bonito"
+   ],
+   "error": null
+  },
+  {
+   "id": "t51",
+   "seconds": 0.5720032998360693,
+   "results": [
+    "enojado",
+    "desaprobado"
+   ],
+   "error": null
+  },
+  {
+   "id": "t52",
+   "seconds": 0.5001460001803935,
+   "results": [
+    "locura"
+   ],
+   "error": null
+  },
+  {
+   "id": "t53",
+   "seconds": 0.603186400141567,
+   "results": [
+    "pequeño milagro"
+   ],
+   "error": null
+  },
+  {
+   "id": "t54",
+   "seconds": 0.6103292000479996,
+   "results": [
+    "ponerse en marcha"
+   ],
+   "error": null
+  },
+  {
+   "id": "t55",
+   "seconds": 0.5975201996043324,
+   "results": [
+    "no es un cohete"
+   ],
+   "error": null
+  },
+  {
+   "id": "t56",
+   "seconds": 0.6330909999087453,
+   "results": [
+    "tomar cortas"
+   ],
+   "error": null
+  },
+  {
+   "id": "t57",
+   "seconds": 0.36699260026216507,
+   "results": [
+    "bien / de acuerdo"
+   ],
+   "error": null
+  },
+  {
+   "id": "t58",
+   "seconds": 0.5111293001100421,
+   "results": [
+    "ni modo"
+   ],
+   "error": null
+  },
+  {
+   "id": "t59",
+   "seconds": 0.5212182002142072,
+   "results": [
+    "lo que sea"
+   ],
+   "error": null
+  },
+  {
+   "id": "t60",
+   "seconds": 0.6018003998324275,
+   "results": [
+    "tener mucho que hacer"
+   ],
+   "error": null
+  },
+  {
+   "id": "t61",
+   "seconds": 0.5414816001430154,
+   "results": [
+    "encarar",
+    "entrevista"
+   ],
+   "error": null
+  },
+  {
+   "id": "t62",
+   "seconds": 0.5291881002485752,
+   "results": [
+    "revisar",
+    "viaje"
+   ],
+   "error": null
+  },
+  {
+   "id": "t63",
+   "seconds": 0.6010360000655055,
+   "results": [
+    "lluvia intensa"
+   ],
+   "error": null
+  },
+  {
+   "id": "t64",
+   "seconds": 0.6221227003261447,
+   "results": [
+    "fumador voraz"
+   ],
+   "error": null
+  },
+  {
+   "id": "t65",
+   "seconds": 0.6056760000064969,
+   "results": [
+    "que nos vemos",
+    "tienes que venir"
+   ],
+   "error": null
+  },
+  {
+   "id": "t66",
+   "seconds": 0.5860448000021279,
+   "results": [
+    "espera un momento",
+    "chaleco"
+   ],
+   "error": null
+  },
+  {
+   "id": "t67",
+   "seconds": 0.5720909996889532,
+   "results": [
+    "pasar tiempo"
+   ],
+   "error": null
+  },
+  {
+   "id": "t68",
+   "seconds": 0.5745415999554098,
+   "results": [
+    "aburrirse de"
+   ],
+   "error": null
+  },
+  {
+   "id": "t69",
+   "seconds": 0.5751706003211439,
+   "results": [
+    "fallar"
+   ],
+   "error": null
+  },
+  {
+   "id": "t70",
+   "seconds": 0.5528647000901401,
+   "results": [
+    "fallar",
+    "trato / acuerdo"
+   ],
+   "error": null
+  },
+  {
+   "id": "t71",
+   "seconds": 0.3554353998042643,
+   "results": [
+    "no guardar rencor"
+   ],
+   "error": null
+  },
+  {
+   "id": "t72",
+   "seconds": 0.4968508002348244,
+   "results": [
+    "firme"
+   ],
+   "error": null
+  },
+  {
+   "id": "t73",
+   "seconds": 0.3623422998934984,
+   "results": [
+    "salir adelante"
+   ],
+   "error": null
+  },
+  {
+   "id": "t74",
+   "seconds": 0.4963213996961713,
+   "results": [
+    "firme",
+    "testigo"
+   ],
+   "error": null
+  },
+  {
+   "id": "t75",
+   "seconds": 0.5770096997730434,
+   "results": [
+    "poder permitir"
+   ],
+   "error": null
+  },
+  {
+   "id": "t76",
+   "seconds": 0.5430683000013232,
+   "results": [
+    "detenerse",
+    "negociaciones"
+   ],
+   "error": null
+  },
+  {
+   "id": "t77",
+   "seconds": 0.3447003001347184,
+   "results": [
+    "tener celos de"
+   ],
+   "error": null
+  },
+  {
+   "id": "t78",
+   "seconds": 0.5459472998045385,
+   "results": [
+    "ayudar",
+    "cajas"
+   ],
+   "error": null
+  },
+  {
+   "id": "t79",
+   "seconds": 0.40087469993159175,
+   "results": [
+    "saludo a grandes mañas"
+   ],
+   "error": null
+  },
+  {
+   "id": "t80",
+   "seconds": 0.5749478000216186,
+   "results": [
+    "animado"
+   ],
+   "error": null
+  }
+ ]
+}

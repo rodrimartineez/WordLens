@@ -1,0 +1,704 @@
+{
+ "engine": "argos",
+ "summary": {
+  "items": 117,
+  "correct_auto": 33,
+  "accuracy_auto": 0.282,
+  "missing": 0,
+  "seconds_total": 35.4,
+  "seconds_per_line": 0.44,
+  "by_tag": {
+   "collocation": "2/15",
+   "colloquial": "7/27",
+   "context": "4/15",
+   "idiom": "1/23",
+   "insult": "0/2",
+   "irony": "2/5",
+   "negation": "2/13",
+   "pair": "2/5",
+   "phrasal": "12/34",
+   "polysemy": "18/39",
+   "slang": "4/12",
+   "word": "3/6"
+  }
+ },
+ "runs": [
+  {
+   "id": "t01",
+   "seconds": 1.2109708376069608,
+   "results": [
+    "Cepillo apagado",
+    "preocupaciones",
+    "Adelante.",
+    "acuerdo"
+   ],
+   "error": null
+  },
+  {
+   "id": "t02",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "."
+   ],
+   "error": null
+  },
+  {
+   "id": "t03",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "golpe� el clavo en la cabeza"
+   ],
+   "error": null
+  },
+  {
+   "id": "t04",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "Renuncia"
+   ],
+   "error": null
+  },
+  {
+   "id": "t05",
+   "seconds": 0.6054854188034804,
+   "results": [
+    "ceder",
+    "argumentar"
+   ],
+   "error": null
+  },
+  {
+   "id": "t06",
+   "seconds": 0.6054854188034804,
+   "results": [
+    "tratar con",
+    "cliente"
+   ],
+   "error": null
+  },
+  {
+   "id": "t07",
+   "seconds": 0.6054854188034804,
+   "results": [
+    "gran cosa",
+    "falla"
+   ],
+   "error": null
+  },
+  {
+   "id": "t08",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "acuerdo"
+   ],
+   "error": null
+  },
+  {
+   "id": "t09",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "libro"
+   ],
+   "error": null
+  },
+  {
+   "id": "t10",
+   "seconds": 0.6054854188034804,
+   "results": [
+    "banco",
+    "barro"
+   ],
+   "error": null
+  },
+  {
+   "id": "t11",
+   "seconds": 0.6054854188034804,
+   "results": [
+    "enfermos",
+    "amigo."
+   ],
+   "error": null
+  },
+  {
+   "id": "t12",
+   "seconds": 0.6054854188034804,
+   "results": [
+    "roto",
+    "D�a de pago"
+   ],
+   "error": null
+  },
+  {
+   "id": "t13",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "imb�cil"
+   ],
+   "error": null
+  },
+  {
+   "id": "t14",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "golpe alrededor del arbusto"
+   ],
+   "error": null
+  },
+  {
+   "id": "t15",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "gatos de lluvia y perros"
+   ],
+   "error": null
+  },
+  {
+   "id": "t16",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "dejar al gato fuera de la bolsa"
+   ],
+   "error": null
+  },
+  {
+   "id": "t17",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "to the decision"
+   ],
+   "error": null
+  },
+  {
+   "id": "t18",
+   "seconds": 0.6054854188034804,
+   "results": [
+    "to take into account",
+    "Gastos"
+   ],
+   "error": null
+  },
+  {
+   "id": "t19",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "no la herramienta m�s afilada en el cobertizo"
+   ],
+   "error": null
+  },
+  {
+   "id": "t20",
+   "seconds": 0.6054854188034804,
+   "results": [
+    "justo lo que necesitaba",
+    "reuni�n"
+   ],
+   "error": null
+  },
+  {
+   "id": "t21",
+   "seconds": 0.6054854188034804,
+   "results": [
+    "no pod�a importar menos",
+    "opini�n"
+   ],
+   "error": null
+  },
+  {
+   "id": "t22",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "correr los n�meros"
+   ],
+   "error": null
+  },
+  {
+   "id": "t23",
+   "seconds": 0.9082281282052206,
+   "results": [
+    "Corre",
+    "panader�a",
+    "centro"
+   ],
+   "error": null
+  },
+  {
+   "id": "t24",
+   "seconds": 0.6054854188034804,
+   "results": [
+    "nariz hueca",
+    "dolor de garganta"
+   ],
+   "error": null
+  },
+  {
+   "id": "t25",
+   "seconds": 0.6054854188034804,
+   "results": [
+    "�Vamos!",
+    "fusi�n"
+   ],
+   "error": null
+  },
+  {
+   "id": "t26",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "Su�ltame."
+   ],
+   "error": null
+  },
+  {
+   "id": "t27",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "Recoge"
+   ],
+   "error": null
+  },
+  {
+   "id": "t28",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "Recoge"
+   ],
+   "error": null
+  },
+  {
+   "id": "t29",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "Mira."
+   ],
+   "error": null
+  },
+  {
+   "id": "t30",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "Mira."
+   ],
+   "error": null
+  },
+  {
+   "id": "t31",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "huida"
+   ],
+   "error": null
+  },
+  {
+   "id": "t32",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "Ve por la cabeza."
+   ],
+   "error": null
+  },
+  {
+   "id": "t33",
+   "seconds": 0.6054854188034804,
+   "results": [
+    "fianza",
+    "en el �ltimo minuto"
+   ],
+   "error": null
+  },
+  {
+   "id": "t34",
+   "seconds": 0.9082281282052206,
+   "results": [
+    "llor�n",
+    "llegar al trabajo",
+    "Renuncio"
+   ],
+   "error": null
+  },
+  {
+   "id": "t35",
+   "seconds": 0.6054854188034804,
+   "results": [
+    "apagado",
+    "tormenta"
+   ],
+   "error": null
+  },
+  {
+   "id": "t36",
+   "seconds": 0.6054854188034804,
+   "results": [
+    "comprar",
+    "Buen intento."
+   ],
+   "error": null
+  },
+  {
+   "id": "t37",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "fuera"
+   ],
+   "error": null
+  },
+  {
+   "id": "t38",
+   "seconds": 0.6054854188034804,
+   "results": [
+    "propio hasta",
+    "error"
+   ],
+   "error": null
+  },
+  {
+   "id": "t39",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "bajo el clima"
+   ],
+   "error": null
+  },
+  {
+   "id": "t40",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "vertedero"
+   ],
+   "error": null
+  },
+  {
+   "id": "t41",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "vertedero"
+   ],
+   "error": null
+  },
+  {
+   "id": "t42",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "romper una pierna"
+   ],
+   "error": null
+  },
+  {
+   "id": "t43",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "cost� un brazo y una pierna"
+   ],
+   "error": null
+  },
+  {
+   "id": "t44",
+   "seconds": 0.6054854188034804,
+   "results": [
+    "mantener un ojo en",
+    "ni�os"
+   ],
+   "error": null
+  },
+  {
+   "id": "t45",
+   "seconds": 0.6054854188034804,
+   "results": [
+    "en la cerca",
+    "extranjero"
+   ],
+   "error": null
+  },
+  {
+   "id": "t46",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "dolor en el cuello"
+   ],
+   "error": null
+  },
+  {
+   "id": "t47",
+   "seconds": 0.6054854188034804,
+   "results": [
+    "paso en �l",
+    "Llega tarde"
+   ],
+   "error": null
+  },
+  {
+   "id": "t48",
+   "seconds": 0.6054854188034804,
+   "results": [
+    "Lev�ntate.",
+    "brillante"
+   ],
+   "error": null
+  },
+  {
+   "id": "t49",
+   "seconds": 0.6054854188034804,
+   "results": [
+    "remoto",
+    "lucha"
+   ],
+   "error": null
+  },
+  {
+   "id": "t50",
+   "seconds": 0.6054854188034804,
+   "results": [
+    "remoto",
+    "bonita."
+   ],
+   "error": null
+  },
+  {
+   "id": "t51",
+   "seconds": 0.6054854188034804,
+   "results": [
+    "loco",
+    "decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion decepcion"
+   ],
+   "error": null
+  },
+  {
+   "id": "t52",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "loco"
+   ],
+   "error": null
+  },
+  {
+   "id": "t53",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "llamada"
+   ],
+   "error": null
+  },
+  {
+   "id": "t54",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "Toma un cheque de lluvia"
+   ],
+   "error": null
+  },
+  {
+   "id": "t55",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "no ciencia de cohetes"
+   ],
+   "error": null
+  },
+  {
+   "id": "t56",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "esquinas cortadas"
+   ],
+   "error": null
+  },
+  {
+   "id": "t57",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "lo suficiente"
+   ],
+   "error": null
+  },
+  {
+   "id": "t58",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "No puede ser"
+   ],
+   "error": null
+  },
+  {
+   "id": "t59",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "lo que sea"
+   ],
+   "error": null
+  },
+  {
+   "id": "t60",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "tienen mucho en el plato"
+   ],
+   "error": null
+  },
+  {
+   "id": "t61",
+   "seconds": 0.6054854188034804,
+   "results": [
+    "clavo",
+    "entrevista"
+   ],
+   "error": null
+  },
+  {
+   "id": "t62",
+   "seconds": 0.6054854188034804,
+   "results": [
+    "Pincel arriba",
+    "viaje"
+   ],
+   "error": null
+  },
+  {
+   "id": "t63",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "lluvia pesada"
+   ],
+   "error": null
+  },
+  {
+   "id": "t64",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "fumador pesado"
+   ],
+   "error": null
+  },
+  {
+   "id": "t65",
+   "seconds": 0.6054854188034804,
+   "results": [
+    "Te atrapar� m�s tarde",
+    "Tengo que irme."
+   ],
+   "error": null
+  },
+  {
+   "id": "t66",
+   "seconds": 0.6054854188034804,
+   "results": [
+    "Espera.",
+    "abrigo"
+   ],
+   "error": null
+  },
+  {
+   "id": "t67",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "Espera."
+   ],
+   "error": null
+  },
+  {
+   "id": "t68",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "se hace con"
+   ],
+   "error": null
+  },
+  {
+   "id": "t69",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "backfire"
+   ],
+   "error": null
+  },
+  {
+   "id": "t70",
+   "seconds": 0.6054854188034804,
+   "results": [
+    "ca�da",
+    "acuerdo"
+   ],
+   "error": null
+  },
+  {
+   "id": "t71",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "Un rencor."
+   ],
+   "error": null
+  },
+  {
+   "id": "t72",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "terco"
+   ],
+   "error": null
+  },
+  {
+   "id": "t73",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "fuera del bosque"
+   ],
+   "error": null
+  },
+  {
+   "id": "t74",
+   "seconds": 0.6054854188034804,
+   "results": [
+    "adamant",
+    "testigo"
+   ],
+   "error": null
+  },
+  {
+   "id": "t75",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "asequible"
+   ],
+   "error": null
+  },
+  {
+   "id": "t76",
+   "seconds": 0.6054854188034804,
+   "results": [
+    "stall",
+    "negociaciones"
+   ],
+   "error": null
+  },
+  {
+   "id": "t77",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "te enamoras"
+   ],
+   "error": null
+  },
+  {
+   "id": "t78",
+   "seconds": 0.6054854188034804,
+   "results": [
+    "Dame una mano.",
+    "cajas"
+   ],
+   "error": null
+  },
+  {
+   "id": "t79",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "dar una mano grande"
+   ],
+   "error": null
+  },
+  {
+   "id": "t80",
+   "seconds": 0.3027427094017402,
+   "results": [
+    "iluminado"
+   ],
+   "error": null
+  }
+ ]
+}

@@ -21,8 +21,21 @@ from wordlens.config.paths import DATA_DIR, IS_FROZEN, LOG_DIR
 from wordlens.config.settings import DEFAULT_CONFIG_PATH, load_settings
 
 APP_USER_MODEL_ID = "WordLens.WordLens"
-MUTEX_NAME = "Local\\WordLens_single_instance"
-SHOW_EVENT_NAME = "Local\\WordLens_show_window"
+
+
+def _instance_suffix() -> str:
+    """Una carpeta de datos = una instancia. Con WORDLENS_DATA_DIR (pruebas aisladas)
+    se usa otro nombre: no compite con la app instalada ni comparte sus datos."""
+    import hashlib
+    import os
+
+    override = os.environ.get("WORDLENS_DATA_DIR")
+    return "_" + hashlib.sha1(override.lower().encode("utf-8")).hexdigest()[:8] if override else ""
+
+
+# Sin sufijo coincide con AppMutex del instalador (packaging/installer.iss).
+MUTEX_NAME = "Local\\WordLens_single_instance" + _instance_suffix()
+SHOW_EVENT_NAME = "Local\\WordLens_show_window" + _instance_suffix()
 
 kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
 kernel32.CreateEventW.restype = ctypes.c_void_p
@@ -152,9 +165,11 @@ def main(argv: list[str] | None = None) -> int:
         settings.document_path = str(Path(args.document).resolve())
         settings.setup_complete = True
 
+    from wordlens import migration
     from wordlens.app import WordLensApp
 
     app = WordLensApp(settings)
+    migration.run(app.store, settings)
     log.info(
         "WordLens %s iniciado (%s). Datos: %s | Modelo: %s | Documento: %s",
         __version__, "instalado" if IS_FROZEN else "desarrollo", DATA_DIR,
@@ -204,6 +219,7 @@ def main(argv: list[str] | None = None) -> int:
     tray.start()
     listen_for_show_requests(lambda: window.call_soon(window.show))
     failed = hotkeys.register()
+    app.boot()  # después de la ventana: la revisión pendiente ya tiene quien la abra
 
     def after_ready() -> None:
         warn_failed(failed)
@@ -238,6 +254,7 @@ def run_headless(app, args) -> int:
     done = threading.Event()
     if args.duration:
         threading.Timer(args.duration, done.set).start()
+    app.boot()
     log.info("Modo sin interfaz. %s para iniciar, %s para detener, Ctrl+C para salir.", s.hotkey_start, s.hotkey_stop)
     if args.start:
         app.start()

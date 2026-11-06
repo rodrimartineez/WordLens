@@ -23,6 +23,7 @@ log = logging.getLogger(__name__)
 DOT_COLORS = {
     "Capturing": (22, 163, 74),
     "Processing": (217, 119, 6),
+    "Finishing": (217, 119, 6),
     "Starting…": (217, 119, 6),
     "Error": (220, 38, 38),
 }
@@ -60,6 +61,11 @@ class TrayUI:
                 ),
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem(
+                    lambda _: f"Review vocabulary ({self._to_review()})…",
+                    lambda *_: w.call_soon(w.open_review),
+                    enabled=lambda _: self.app.settings.setup_complete,
+                ),
+                pystray.MenuItem(
                     "Open vocabulary document",
                     lambda *_: w.call_soon(w.open_document),
                     enabled=lambda _: self.app.settings.setup_complete,
@@ -74,6 +80,13 @@ class TrayUI:
                 pystray.MenuItem("Exit", lambda *_: w.call_soon(w.exit)),
             ),
         )
+
+    def _to_review(self) -> int:
+        try:
+            c = self.app.counts()
+            return c["pending"] + c["unsaved"]
+        except Exception:  # noqa: BLE001
+            return 0
 
     def _status(self) -> str:
         try:
@@ -90,7 +103,7 @@ class TrayUI:
         status = self._status()
         title = f"WordLens — {status}"
         if self.app.state.state is not AppState.INACTIVE and status != "Error":
-            title += f" ({self.app.stats.added} new)"
+            title += f" ({self._to_review()} to review)"
         return title[:127]  # límite de Windows para tooltips
 
     def _change_document(self) -> None:

@@ -27,7 +27,8 @@ def run() -> int:
     from wordlens.config.settings import load_settings
     from wordlens.document.word_writer import WordWriter
     from wordlens.ocr.ocr_engine import WindowsOcr, available_languages
-    from wordlens.vocabulary.extractor import validate_item
+    from wordlens.vocabulary.extractor import validate_candidate
+    from wordlens.vocabulary.store import VocabularyStore
     from wordlens.vocabulary.models import VocabularyItem
 
     failures = 0
@@ -59,11 +60,20 @@ def run() -> int:
             result(f"ocr {tag}", False, repr(exc))
 
     try:
-        item = validate_item({"expression": "figure out", "translation": "averiguar"},
-                             "I couldn't figure it out.")
+        item = validate_candidate({"expression": "figure out", "type": "phrasal verb"}, "I couldn't figure it out.")
         result("wordfreq + validation", item is not None)
     except Exception as exc:  # noqa: BLE001
         result("wordfreq + validation", False, repr(exc))
+
+    try:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = VocabularyStore(Path(tmp) / "v.db").open()
+            store.exclude("en", "nail", "nail")
+            ok = store.is_excluded("en", "nail")
+            store.close()
+            result("sqlite store", ok)
+    except Exception as exc:  # noqa: BLE001
+        result("sqlite store", False, repr(exc))
 
     try:
         with tempfile.TemporaryDirectory() as tmp:

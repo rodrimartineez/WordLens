@@ -10,7 +10,7 @@ from wordlens.document.word_writer import (
     WordWriter,
     parse_entry,
 )
-from wordlens.vocabulary.deduplicator import Deduplicator
+from wordlens.vocabulary.normalization import entry_key
 from wordlens.vocabulary.models import VocabularyItem as V
 
 
@@ -144,15 +144,31 @@ def test_parse_entry():
     assert parse_entry("   ") is None
 
 
-def test_deduplicator_roundtrip(tmp_path):
-    d = Deduplicator(["Figure out", "take it for granted"])
-    assert d.contains("figure out")
-    assert d.contains("take for granted")
-    assert not d.contains("get at")
-    assert d.add("get at") is True
-    assert d.add("Get at") is False
-    items = d.filter_new([V("get at", "x"), V("make out", "y"), V("MAKE OUT", "z")])
-    assert [i.expression for i in items] == ["make out"]
+def test_entry_keys_match_document_dedup():
+    assert entry_key("Figure out") == entry_key("figure out")
+    assert entry_key("take it for granted") == entry_key("take for granted")
+    assert entry_key("concerns") == entry_key("concern")
+    assert entry_key("get at") != entry_key("get out")
+
+
+def test_save_confirmed_verifies_and_never_duplicates(tmp_path):
+    w = WordWriter(tmp_path / "v.docx")
+    assert w.save_confirmed([V("deal", "acuerdo"), V("Deals", "acuerdos")]) == {"deal"}
+    assert w.save_confirmed([V("deal", "acuerdo"), V("brush off", "restar importancia a")]) == {"deal", "brush off"}
+    assert w.read_expressions() == ["deal", "brush off"]
+
+
+def test_save_confirmed_raises_and_keeps_nothing_in_memory(tmp_path, monkeypatch):
+    import os
+
+    w = WordWriter(tmp_path / "v.docx")
+    w.ensure_exists()
+    monkeypatch.setattr(os, "replace", lambda *a: (_ for _ in ()).throw(PermissionError()))
+    with pytest.raises(DocumentLockedError):
+        w.save_confirmed([V("deal", "acuerdo")])
+    assert w.pending_count == 0  # la cola es vocabulary.db, no la memoria
+    monkeypatch.undo()
+    assert w.read_expressions() == []
 
 
 def test_exclusive_lock_is_reported_as_locked_not_corrupt(tmp_path):

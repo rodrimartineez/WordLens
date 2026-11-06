@@ -2,7 +2,7 @@ import json
 import os
 from pathlib import Path
 
-from wordlens.app import WordLensApp, pending_file_for
+
 from wordlens.config import paths
 from wordlens.config.settings import (
     LEGACY_APP_NAME,
@@ -11,7 +11,7 @@ from wordlens.config.settings import (
     resolve_document_path,
     save_settings,
 )
-from wordlens.document.word_writer import BACKUP_DIR_NAME, DocumentLockedError, WordWriter
+from wordlens.document.word_writer import BACKUP_DIR_NAME, WordWriter
 from wordlens.vocabulary.models import VocabularyItem
 
 
@@ -119,32 +119,6 @@ def test_backups_go_to_data_folder_not_next_to_document(tmp_path):
     assert backup.parent == backups
     assert not (doc.parent / BACKUP_DIR_NAME).exists()
     assert sorted(p.name for p in doc.parent.iterdir()) == ["Vocabulario.docx"]
-
-
-def test_pending_entries_are_saved_in_data_folder_and_recovered(tmp_path, monkeypatch):
-    doc = tmp_path / "Inglés" / "Vocabulario.docx"
-    writer = WordWriter(doc)
-    writer.add_entries([VocabularyItem("figure out", "averiguar")])
-
-    real_replace = os.replace
-    monkeypatch.setattr(os, "replace", lambda *a: (_ for _ in ()).throw(PermissionError()))
-    try:
-        writer.add_entries([VocabularyItem("get at", "insinuar")])
-    except DocumentLockedError:
-        pass
-    app = WordLensApp(Settings(document_path=str(doc), notifications=False))
-    app.writer = writer
-    app._flush_pending(final=True)
-    pending = pending_file_for(doc)
-    assert pending.parent == paths.PENDING_DIR
-    assert pending.read_text(encoding="utf-8").strip() == "get at — insinuar"
-    assert sorted(p.name for p in doc.parent.iterdir()) == ["Vocabulario.docx"]  # nada junto al documento
-
-    # Siguiente sesión con Word cerrado: se recuperan solas.
-    monkeypatch.setattr(os, "replace", real_replace)
-    app._recover_pending(WordWriter(doc))
-    assert WordWriter(doc).read_expressions() == ["figure out", "get at"]
-    assert not pending.exists()
 
 
 def test_default_document_avoids_protected_documents_folder(monkeypatch):

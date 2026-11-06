@@ -1,3 +1,3 @@
-"""WordLens: detecta vocabulario B2-C1 en subtítulos en pantalla y lo guarda en Word."""
+"""WordLens: recoge vocabulario de los subtítulos en pantalla para revisarlo y guardarlo en Word."""
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"

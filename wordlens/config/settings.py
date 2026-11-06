@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import shutil
 from dataclasses import asdict, dataclass, fields
 from pathlib import Path
 
@@ -31,11 +32,12 @@ def resolve_document_path(value: str) -> Path:
 class Settings:
     # General
     app_name: str = "WordLens"
-    target_level: str = "B2-C1"
     source_language: str = "English"
     target_language: str = "Spanish"
     # False hasta completar la configuración inicial (documento + idiomas).
     setup_complete: bool = False
+    # Apariencia de la interfaz: "dark" | "light".
+    theme: str = "dark"
 
     # Atajos globales
     hotkey_start: str = "ctrl+shift+v"
@@ -77,19 +79,17 @@ class Settings:
     ollama_timeout_seconds: float = 180.0
     ollama_keep_alive: str = "30m"
     temperature: float = 0.0
-    batch_max_lines: int = 4
-    batch_wait_seconds: float = 1.5
-    max_queue_lines: int = 40
-    prefilter_trivial_lines: bool = True
-    # Marca en cada línea palabras poco frecuentes y posibles phrasal verbs para
-    # que el modelo no se quede con el primer elemento (ver vocabulary/candidates.py).
+    batch_max_lines: int = 1  # subtítulos por llamada al modelo de extracción (1 = más fiable)
+    # Marca en cada línea las combinaciones verbo + partícula para que el modelo
+    # no pase por alto un phrasal verb (ver vocabulary/candidates.py).
     candidate_hints: bool = True
-    # Segunda pasada sólo para las palabras poco frecuentes que el modelo no evaluó.
-    review_pass: bool = True
-
-    # Filtro de vocabulario
-    max_single_word_zipf: float = 4.5
     max_expression_words: int = 6
+
+    # Traducción (ver translation/translator.py). Modelo local de Ollama elegido
+    # por calidad tras comparar alternativas gratuitas; si no está instalado se
+    # traduce con ollama_model.
+    translation_model: str = "gemma3:4b"
+    translation_keep_alive: str = "10m"
 
     # Interfaz
     notifications: bool = True
@@ -142,6 +142,10 @@ def _migrate(data: dict) -> bool:
             changed = True
     if data.get("ocr_language") == "en-US":  # antiguo valor fijo -> automático
         data["ocr_language"] = "auto"
+        changed = True
+    if "translation_model" not in data and data.get("batch_max_lines") == 4:
+        # 1.x: 4 líneas por llamada. La extracción exhaustiva es más fiable de una en una.
+        data["batch_max_lines"] = Settings.batch_max_lines
         changed = True
     if "monitor" in data:  # 1.0: índice de mss (1 = primer monitor) -> capture_monitor
         legacy = data.pop("monitor")
@@ -204,9 +208,25 @@ def load_settings(path: Path = DEFAULT_CONFIG_PATH) -> Settings:
     settings = _from_dict(data, defaults)
     # Añade al archivo las claves nuevas que no tuviera.
     known = {f.name for f in fields(Settings)}
-    if migrated or known - set(data):
+    if migrated or known - set(data) or set(data) - known:
+        _backup_config(path)
         save_settings(settings, path)
     return settings
+
+
+def _backup_config(path: Path) -> None:
+    """Antes de reescribir un config.json existente al actualizar, se guarda una copia."""
+    from datetime import datetime
+
+    from .paths import BACKUP_DIR
+
+    try:
+        target_dir = BACKUP_DIR if path == DEFAULT_CONFIG_PATH else path.parent
+        target_dir.mkdir(parents=True, exist_ok=True)
+        stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        shutil.copy2(path, target_dir / f"config_{stamp}.json")
+    except OSError as exc:
+        log.warning("No se pudo copiar %s antes de actualizarlo: %s", path, exc)
 
 
 def _from_dict(data: dict, defaults: Settings) -> Settings:

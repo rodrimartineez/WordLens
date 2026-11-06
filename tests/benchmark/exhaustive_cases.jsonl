@@ -1,0 +1,50 @@
+{"id": "e01", "text": "He brushed off my concerns and went ahead with the deal.", "expected": [["brush off"], ["concern"], ["go ahead with", "go ahead"], ["deal"]], "acceptable": [], "forbidden": ["brush", "my", "ahead", "the"]}
+{"id": "e02", "text": "I can't put up with this anymore.", "expected": [["put up with"]], "acceptable": ["anymore", "can't put up with"], "forbidden": ["put", "can", "this", "i"]}
+{"id": "e03", "text": "You really hit the nail on the head.", "expected": [["hit the nail on the head"]], "acceptable": ["really"], "forbidden": ["nail", "head", "you"]}
+{"id": "e04", "text": "I have to go to the television store.", "expected": [["television", "television store"], ["store", "television store"]], "acceptable": ["go", "go to"], "forbidden": ["have to", "i have to", "have", "to", "the", "i"]}
+{"id": "e05", "text": "Don't give up, you're almost there.", "expected": [["give up"]], "acceptable": ["almost", "almost there"], "forbidden": ["give", "don't", "there", "you're"]}
+{"id": "e06", "text": "After hours of arguing, he finally gave in.", "expected": [["hour"], ["argue"], ["finally"], ["give in"]], "acceptable": ["after hours"], "forbidden": ["give", "after", "he"]}
+{"id": "e07", "text": "That movie was sick, dude!", "expected": [["movie"], ["sick"], ["dude"]], "acceptable": [], "forbidden": ["that", "was"]}
+{"id": "e08", "text": "I'm broke until payday, so I'll take a rain check.", "expected": [["broke"], ["payday"], ["take a rain check", "rain check"]], "acceptable": [], "forbidden": ["take", "rain", "check", "until", "i'm"]}
+{"id": "e09", "text": "Stop beating around the bush and tell me what happened.", "expected": [["stop"], ["beat around the bush"], ["tell"], ["happen"]], "acceptable": [], "forbidden": ["bush", "beat", "what", "me"]}
+{"id": "e10", "text": "The meeting was called off because of the storm.", "expected": [["meeting"], ["call off"], ["storm"]], "acceptable": ["because of"], "forbidden": ["call", "because", "the"]}
+{"id": "e11", "text": "She runs a small bakery downtown.", "expected": [["run"], ["small"], ["bakery"], ["downtown"]], "acceptable": ["small bakery"], "forbidden": ["she", "a"]}
+{"id": "e12", "text": "Keep an eye on the kids while I grab some groceries.", "expected": [["keep an eye on", "keep an eye"], ["kid"], ["grab"], ["grocery", "groceries"]], "acceptable": [], "forbidden": ["eye", "keep", "while", "some"]}
+{"id": "e13", "text": "We ran out of milk, so I'm heading to the shop.", "expected": [["run out of", "run out"], ["milk"], ["head", "head to"], ["shop"]], "acceptable": [], "forbidden": ["ran", "out", "so"]}
+{"id": "e14", "text": "He's such a jerk, I can't stand him.", "expected": [["jerk"], ["stand", "can't stand"]], "acceptable": [], "forbidden": ["such", "him", "can"]}
+{"id": "e15", "text": "Honestly, I couldn't care less about the gossip.", "expected": [["honestly"], ["couldn't care less", "could not care less", "care less"], ["gossip"]], "acceptable": ["care"], "forbidden": ["about", "less", "couldn't"]}
+{"id": "e16", "text": "It's raining cats and dogs, so grab an umbrella.", "expected": [["rain cats and dogs", "raining cats and dogs"], ["grab"], ["umbrella"]], "acceptable": [], "forbidden": ["cat", "dog", "rain"]}
+{"id": "e17", "text": "She made a decision without asking anyone.", "expected": [["make a decision", "decision"], ["ask"]], "acceptable": ["decision", "make", "make a decision"], "forbidden": ["without", "anyone"]}
+{"id": "e18", "text": "The landlord refused to fix the leaking faucet.", "expected": [["landlord"], ["refuse"], ["fix"], ["leak", "leaking", "leaking faucet"], ["faucet"]], "acceptable": ["leaking faucet"], "forbidden": ["the", "to"]}
+{"id": "e19", "text": "Quit whining and get to work.", "expected": [["quit"], ["whine", "whining"], ["get to work"]], "acceptable": ["work", "get"], "forbidden": ["and"]}
+{"id": "e20", "text": "He finally owned up to his mistake.", "expected": [["finally"], ["own up to", "own up"], ["mistake"]], "acceptable": [], "forbidden": ["own", "his"]}
+{"id": "e21", "text": "I'm still on the fence about moving abroad.", "expected": [["on the fence", "be on the fence"], ["move"], ["abroad"]], "acceptable": ["still", "move abroad"], "forbidden": ["fence", "about"]}
+{"id": "e22", "text": "We had heavy rain all night.", "expected": [["heavy rain"], ["night", "all night"]], "acceptable": ["heavy", "rain", "all night"], "forbidden": ["had", "have", "we", "all"]}
+{"id": "e23", "text": "My dad was a heavy smoker for years.", "expected": [["dad"], ["heavy smoker"], ["year", "for years"]], "acceptable": ["smoker", "heavy", "for years"], "forbidden": ["my", "was"]}
+{"id": "e24", "text": "Look it up in the dictionary.", "expected": [["look up"], ["dictionary"]], "acceptable": [], "forbidden": ["look", "it", "in"]}
+{"id": "e25", "text": "Things are finally looking up.", "expected": [["thing"], ["finally"], ["look up"]], "acceptable": ["things are looking up"], "forbidden": ["look", "are"]}
+{"id": "e26", "text": "Wow, that was a close call.", "expected": [["close call"]], "acceptable": [], "forbidden": ["wow", "close", "call", "that"]}
+{"id": "e27", "text": "Fair enough, let's do it your way.", "expected": [["fair enough"], ["way", "your way", "do it your way"]], "acceptable": ["fair", "let's", "let"], "forbidden": ["enough", "do", "it", "your"]}
+{"id": "e28", "text": "No way I'm going in there.", "expected": [["no way"]], "acceptable": ["go", "go in", "going in"], "forbidden": ["there", "i'm", "way", "no"]}
+{"id": "e29", "text": "He bailed on us at the last minute.", "expected": [["bail on", "bail"], ["at the last minute", "last minute"]], "acceptable": ["last", "minute"], "forbidden": ["us", "at"]}
+{"id": "e30", "text": "Hang on a second, I'll get my coat.", "expected": [["hang on", "hang on a second"], ["coat"]], "acceptable": ["second", "get", "a second"], "forbidden": ["my", "i'll", "hang"]}
+{"id": "e31", "text": "The witness was adamant that she never saw the defendant.", "expected": [["witness"], ["adamant"], ["see", "saw"], ["defendant"]], "acceptable": ["never"], "forbidden": ["that", "she", "was"]}
+{"id": "e32", "text": "This apartment is a total dump.", "expected": [["apartment"], ["dump", "total dump"]], "acceptable": ["total"], "forbidden": ["this", "is", "a"]}
+{"id": "e33", "text": "Oh, it's you.", "expected": [], "acceptable": [], "forbidden": ["oh", "it's", "you", "it"]}
+{"id": "e34", "text": "Yes, I know.", "expected": [], "acceptable": ["know"], "forbidden": ["yes", "i"]}
+{"id": "e35", "text": "What are you doing here?", "expected": [], "acceptable": ["do"], "forbidden": ["what", "here", "are", "you"]}
+{"id": "e36", "text": "Tbe negotiations stalled over the weekend.", "expected": [["negotiation"], ["stall"], ["weekend", "over the weekend"]], "acceptable": ["over the weekend"], "forbidden": ["tbe", "over", "the"]}
+{"id": "e37", "text": "SHE TOTALLY NAILED THE INTERVIEW!!", "expected": [["totally"], ["nail"], ["interview"]], "acceptable": ["nail the interview"], "forbidden": ["she", "the"]}
+{"id": "e38", "text": "Gotta go, catch you later.", "expected": [["catch you later"]], "acceptable": ["go", "gotta", "gotta go", "catch", "later"], "forbidden": ["you"]}
+{"id": "e39", "text": "I need to brush up on my French before the trip.", "expected": [["brush up on", "brush up"], ["trip"]], "acceptable": ["need", "french", "before"], "forbidden": ["brush", "my", "the"]}
+{"id": "e40", "text": "Let go of my hand, you creep!", "expected": [["let go of", "let go"], ["hand"], ["creep"]], "acceptable": [], "forbidden": ["my", "you", "of"]}
+{"id": "e41", "text": "The plan backfired and they got fired.", "expected": [["plan"], ["backfire"], ["get fired", "fire"]], "acceptable": ["fire", "get"], "forbidden": ["they", "and"]}
+{"id": "e42", "text": "Can you give me a hand with these boxes?", "expected": [["give a hand", "give me a hand", "give someone a hand"], ["box"]], "acceptable": [], "forbidden": ["hand", "these", "can"]}
+{"id": "e43", "text": "I'm so done with this job.", "expected": [["be done with", "done with", "so done with"], ["job"]], "acceptable": ["done"], "forbidden": ["so", "this", "i'm"]}
+{"id": "e44", "text": "Sarah, grab your jacket, we're leaving.", "expected": [["grab"], ["jacket"], ["leave"]], "acceptable": [], "forbidden": ["sarah", "your", "we're"]}
+{"id": "e45", "text": "Mike said that Sarah was scared.", "expected": [["say"], ["scared"]], "acceptable": ["scare"], "forbidden": ["mike", "sarah", "that", "was"]}
+{"id": "e46", "text": "They're cutting corners to save money.", "expected": [["cut corners"], ["save money", "save"], ["money", "save money"]], "acceptable": ["save", "money"], "forbidden": ["corner", "cut", "they're"]}
+{"id": "e47", "text": "She's got a crush on her neighbour.", "expected": [["have a crush on", "have got a crush on", "got a crush on", "crush on", "crush", "a crush on"], ["neighbour", "neighbor"]], "acceptable": ["get", "have"], "forbidden": ["she's", "her"]}
+{"id": "e48", "text": "He's a pain in the neck, but he means well.", "expected": [["pain in the neck"], ["mean well"]], "acceptable": ["mean"], "forbidden": ["pain", "neck", "but", "well"]}
+{"id": "e49", "text": "I was kidding, chill out!", "expected": [["kid", "kidding"], ["chill out"]], "acceptable": ["chill"], "forbidden": ["was", "i"]}
+{"id": "e50", "text": "The village is pretty remote and the roads are awful.", "expected": [["village"], ["pretty"], ["remote"], ["road"], ["awful"]], "acceptable": ["pretty remote"], "forbidden": ["the", "and", "are"]}

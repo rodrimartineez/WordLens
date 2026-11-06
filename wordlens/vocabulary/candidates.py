@@ -1,11 +1,9 @@
-"""Candidatos de vocabulario detectados sin LLM, para guiar al modelo.
+"""Pistas para el modelo detectadas sin LLM: combinaciones verbo + partícula.
 
-El modelo local es pequeño y tiende a quedarse con el primer elemento de cada
-línea. Antes de llamarlo se marcan en la línea las palabras poco frecuentes y
-las combinaciones verbo + partícula: el modelo las recibe como lista de
-comprobación y DECIDE él qué merece guardarse (una palabra rara no es por sí
-sola vocabulario útil). Nada de esto se guarda sin pasar por el LLM y por
-validate_item().
+El modelo local es pequeño y a veces pasa por alto un phrasal verb partido
+("track him down"). Antes de llamarlo se marcan en la línea las combinaciones
+verbo + partícula; el modelo DECIDE si son phrasal verbs de verdad. Nada de
+esto se guarda sin pasar por el LLM y por la validación.
 """
 
 from __future__ import annotations
@@ -107,11 +105,11 @@ def _phrasal_candidates(words: list[str], function_words: frozenset[str]) -> lis
 
 
 def hint_line(text: str, lang: str = "en") -> str:
-    """Texto de pista que acompaña a la línea en el mensaje al modelo."""
-    c = find_candidates(text, lang)
-    parts = []
-    if c.rare_words:
-        parts.append("less common words: " + ", ".join(c.rare_words))
-    if c.phrasal:
-        parts.append("possible phrasal verbs: " + ", ".join(c.phrasal))
-    return f"   [{'; '.join(parts)}]" if parts else ""
+    """Pista que acompaña a la línea en el mensaje al modelo: posibles phrasal verbs.
+
+    Las palabras sueltas ya no se marcan: se proponen todas las de contenido
+    (ver vocabulary/lexicon.py), así que la pista sólo sirve para que el modelo
+    no pase por alto un verbo + partícula.
+    """
+    phrasal = find_candidates(text, lang).phrasal
+    return f"   [possible phrasal verbs: {', '.join(phrasal)}]" if phrasal else ""

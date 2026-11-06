@@ -181,3 +181,19 @@ def dedup_key(expression: str, lang: str = "en") -> str:
     tokens = ["one's" if t in POSSESSIVES else t for t in tokens]
     loose = [t for i, t in enumerate(tokens) if i == 0 or t not in _PLACEHOLDERS]
     return " ".join(loose if len(loose) >= 2 or len(tokens) < 2 else tokens)
+
+
+def entry_key(expression: str, lang: str = "en") -> str:
+    """Identidad de una entrada de vocabulario (aceptadas, excluidas, pendientes, documento).
+
+    Es dedup_key() más el singular de las palabras sueltas ("concerns" ==
+    "concern", "Nails" == "nail"); "gutted" y "gut" son entradas distintas. Se compara la unidad léxica COMPLETA: excluir
+    "nail" no afecta a "hit the nail on the head", ni "brush off" a "brush";
+    "give up" y "give in" son claves distintas.
+    """
+    key = dedup_key(expression, lang)
+    if key and " " not in key:
+        from .lexicon import word_lemma  # import diferido: lexicon importa este módulo
+
+        return word_lemma(key, lang, inflections=False)
+    return key

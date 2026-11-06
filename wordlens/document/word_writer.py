@@ -31,7 +31,7 @@ import docx
 from docx.document import Document as DocxDocument
 
 from wordlens.vocabulary.models import VocabularyItem
-from wordlens.vocabulary.normalization import dedup_key
+from wordlens.vocabulary.normalization import entry_key
 
 log = logging.getLogger(__name__)
 
@@ -46,6 +46,11 @@ class DocumentError(Exception):
 
 class DocumentLockedError(DocumentError):
     """El documento está abierto/bloqueado por otro programa (normalmente Word)."""
+
+
+def is_lock_error(exc: OSError) -> bool:
+    """Acceso denegado o archivo bloqueado (en uso / bloqueo de una parte) por otro programa."""
+    return isinstance(exc, PermissionError) or getattr(exc, "winerror", None) in (5, 32, 33)
 
 
 def parse_entry(paragraph_text: str, bold_text: str = "") -> str | None:
@@ -85,9 +90,11 @@ class WordWriter:
         # is_zipfile() devuelve False también si el archivo está bloqueado en
         # exclusiva; hay que distinguirlo de un archivo corrupto.
         try:
-            with open(self.path, "rb"):
-                pass
-        except PermissionError as exc:
+            with open(self.path, "rb") as fh:
+                fh.read(4)  # un bloqueo de bytes deja abrir pero no leer
+        except OSError as exc:
+            if not is_lock_error(exc):
+                raise
             raise DocumentLockedError(f"{self.path.name} is locked by another program (is it open in Word?)") from exc
         if not zipfile.is_zipfile(self.path):
             raise DocumentError(
@@ -95,8 +102,10 @@ class WordWriter:
             )
         try:
             return docx.Document(str(self.path))
-        except PermissionError as exc:
-            raise DocumentLockedError(str(exc)) from exc
+        except OSError as exc:
+            if is_lock_error(exc):
+                raise DocumentLockedError(str(exc)) from exc
+            raise DocumentError(f"Could not open {self.path.name}: {exc}") from exc
         except Exception as exc:  # docx lanza varios tipos según la corrupción
             raise DocumentError(f"Could not open {self.path.name}: {exc}") from exc
 
@@ -162,7 +171,9 @@ class WordWriter:
         try:
             document.save(str(tmp))
             os.replace(tmp, self.path)
-        except PermissionError as exc:
+        except OSError as exc:
+            if not is_lock_error(exc):
+                raise
             raise DocumentLockedError(
                 f"Can't write {self.path.name}. Is it open in Word?"
             ) from exc
@@ -198,10 +209,10 @@ class WordWriter:
                 # Bloqueado o ilegible: nada se pierde, queda en espera.
                 self._pending = queue
                 raise
-            existing = {dedup_key(e, self.lang) for e in self._expressions_in(document)}
+            existing = {entry_key(e, self.lang) for e in self._expressions_in(document)}
             written: list[VocabularyItem] = []
             for item in queue:
-                key = dedup_key(item.expression, self.lang)
+                key = entry_key(item.expression, self.lang)
                 if not key or key in existing:
                     continue
                 existing.add(key)
@@ -217,6 +228,41 @@ class WordWriter:
                 self._pending = queue
                 raise
             return written
+
+    def save_confirmed(self, items: list[VocabularyItem]) -> set[str]:
+        """Escribe las entradas que falten y devuelve las claves CONFIRMADAS en el disco.
+
+        Es la escritura de las entradas aceptadas en la revisión:
+        - no guarda nada en memoria: si falla, lanza (DocumentLockedError,
+          DocumentError u OSError) y quien llama conserva las entradas;
+        - una entrada que ya está en el documento cuenta como guardada, así
+          que reintentar una escritura de resultado incierto no la duplica;
+        - tras guardar se vuelve a leer el archivo y sólo se confirma lo que
+          realmente está en él.
+        """
+        wanted: dict[str, VocabularyItem] = {}
+        for item in items:
+            key = entry_key(item.expression, self.lang)
+            if key:
+                wanted.setdefault(key, item)  # la primera de las repetidas
+        if not wanted:
+            return set()
+        with self._lock:
+            document = self._load()
+            existing = {entry_key(e, self.lang) for e in self._expressions_in(document)}
+            missing = [item for key, item in wanted.items() if key not in existing]
+            if missing:
+                self.path.parent.mkdir(parents=True, exist_ok=True)
+                for item in missing:
+                    self._append(document, item)
+                self._save(document)
+            if not self.path.exists():
+                raise DocumentError(f"{self.path.name} was not created")
+            on_disk = {entry_key(e, self.lang) for e in self._expressions_in(self._load())}
+        confirmed = set(wanted) & on_disk
+        if missing and not confirmed & {entry_key(i.expression, self.lang) for i in missing}:
+            raise DocumentError(f"The entries were not found in {self.path.name} after saving")
+        return confirmed
 
     def take_pending(self) -> list[VocabularyItem]:
         """Saca de la cola las entradas pendientes (para volcarlas a otro sitio)."""

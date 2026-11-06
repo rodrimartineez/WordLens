@@ -2,7 +2,11 @@
 
     INACTIVE ──start──▶ CAPTURING ◀──▶ PROCESSING
                             │               │
-                            └────stop───────┴──▶ STOPPED ──start──▶ CAPTURING
+                            └────stop───────┴──▶ FINISHING ──▶ STOPPED ──start──▶ CAPTURING
+
+FINISHING: la captura ya ha parado y se terminan los subtítulos pendientes y
+las traducciones antes de abrir la revisión. Iniciar otra captura en ese
+momento lo interrumpe (todo está guardado y se retoma al volver a parar).
 """
 
 from __future__ import annotations
@@ -19,14 +23,16 @@ class AppState(Enum):
     INACTIVE = "Inactivo"
     CAPTURING = "Capturando"
     PROCESSING = "Procesando"
+    FINISHING = "Terminando"
     STOPPED = "Detenido"
 
 
 TRANSITIONS: dict[AppState, frozenset[AppState]] = {
-    AppState.INACTIVE: frozenset({AppState.CAPTURING}),
-    AppState.CAPTURING: frozenset({AppState.PROCESSING, AppState.STOPPED}),
-    AppState.PROCESSING: frozenset({AppState.CAPTURING, AppState.STOPPED}),
-    AppState.STOPPED: frozenset({AppState.CAPTURING}),
+    AppState.INACTIVE: frozenset({AppState.CAPTURING, AppState.FINISHING}),
+    AppState.CAPTURING: frozenset({AppState.PROCESSING, AppState.FINISHING, AppState.STOPPED}),
+    AppState.PROCESSING: frozenset({AppState.CAPTURING, AppState.FINISHING, AppState.STOPPED}),
+    AppState.FINISHING: frozenset({AppState.STOPPED, AppState.CAPTURING, AppState.INACTIVE}),
+    AppState.STOPPED: frozenset({AppState.CAPTURING, AppState.FINISHING}),
 }
 
 Listener = Callable[[AppState, AppState], None]

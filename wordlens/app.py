@@ -1,20 +1,26 @@
-"""Controlador de la aplicación: sesiones de captura y su procesamiento.
+"""Controlador de la aplicación: sesiones de captura, análisis, revisión y guardado.
 
-Hilos de una sesión:
-  capture  : captura franjas -> OCR -> detector de subtítulos -> cola
-  analyzer : cola -> lotes -> LLM -> validación -> deduplicación -> Word
+Hilos:
+  capture   : captura franjas -> OCR -> detector de subtítulos -> vocabulary.db (lines)
+  analyzer  : lines pendientes -> modelo de extracción -> candidatos consolidados
+  finisher  : al detener: termina las líneas pendientes, traduce y avisa a la
+              interfaz para que abra la ventana de revisión
+  saver     : escribe en Word las entradas aceptadas (✓) y confirma cada una
 
-La captura nunca espera al LLM: si el modelo va más lento que los subtítulos,
-la cola (acotada) descarta los más antiguos en lugar de crecer sin límite.
+Todo lo que importa vive en vocabulary.db (ver vocabulary/store.py): ni un
+subtítulo, ni un candidato, ni una aceptación se quedan sólo en memoria. Si la
+app se cierra a mitad, lo pendiente se retoma la próxima vez.
+
+La captura nunca espera al modelo: los subtítulos se guardan y el analizador
+los va sacando a su ritmo, sin descartar ninguno.
 """
 
 from __future__ import annotations
 
-import hashlib
 import logging
-import queue
 import threading
 import time
+from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -29,16 +35,21 @@ from wordlens.ai.ollama_client import (
 from wordlens.ai.ollama_setup import OllamaState
 from wordlens.ai.vocabulary_analyzer import VocabularyAnalyzer
 from wordlens.capture import monitors
-from wordlens.config.paths import BACKUP_DIR, PENDING_DIR
+from wordlens.config.paths import BACKUP_DIR, DATA_DIR
 from wordlens.config.settings import Settings
-from wordlens.document.word_writer import DocumentError, DocumentLockedError, WordWriter
+from wordlens.document.word_writer import DocumentError, DocumentLockedError, WordWriter, is_lock_error
 from wordlens.state import AppState, StateMachine
-from wordlens.vocabulary.deduplicator import Deduplicator
+from wordlens.translation.translator import OllamaTranslator, TranslationItem, Translator
 from wordlens.vocabulary.models import SubtitleLine, VocabularyItem
+from wordlens.vocabulary.normalization import entry_key
+from wordlens.vocabulary.store import StoreError, VocabularyStore
 
 log = logging.getLogger(__name__)
 
 Notifier = Callable[[str, str], None]  # (título, mensaje)
+
+DB_NAME = "vocabulary.db"
+TRANSLATE_BATCH = 8  # ítems por petición (todos de la misma línea)
 
 
 @dataclass(frozen=True)
@@ -55,35 +66,54 @@ class SessionStats:
     frames: int = 0
     ocr_runs: int = 0
     subtitles: int = 0
-    dropped: int = 0
+    dropped: int = 0  # se mantiene por compatibilidad: ya no se descarta nada
     llm_calls: int = 0
-    added: int = 0
+    added: int = 0  # candidatos nuevos para revisar en esta sesión
     last_added: list[str] = field(default_factory=list)
+    phase: str = ""  # texto de progreso mientras se termina (FINISHING)
 
 
 class WordLensApp:
-    def __init__(self, settings: Settings, notifier: Notifier | None = None) -> None:
+    def __init__(
+        self,
+        settings: Settings,
+        notifier: Notifier | None = None,
+        *,
+        store: VocabularyStore | None = None,
+        translator: Translator | None = None,
+    ) -> None:
         self.settings = settings
         self.state = StateMachine()
-        self.dedup = Deduplicator()
         self.client = OllamaClient(settings.ollama_url, settings.ollama_timeout_seconds)
+        self.translate_client = OllamaClient(settings.ollama_url, settings.ollama_timeout_seconds)
         self.analyzer = VocabularyAnalyzer(settings, self.client)
-        self.writer: WordWriter | None = None
+        self.store = store or VocabularyStore(DATA_DIR / DB_NAME, backup_dir=BACKUP_DIR / "vocabulary").open()
+        self._translator = translator
         self.stats = SessionStats()
         self._notifier = notifier
         self._session_lock = threading.Lock()
         self._stop_event = threading.Event()
         self._threads: list[threading.Thread] = []
-        self._queue: queue.Queue[SubtitleLine] = queue.Queue(maxsize=settings.max_queue_lines)
+        self._wake = threading.Event()  # hay subtítulos nuevos para el analizador
         self._last_notice: dict[str, float] = {}
         self._stats_listeners: list[Callable[[SessionStats], None]] = []
         self._error_listeners: list[Callable[[AppError | None], None]] = []
+        self._review_listeners: list[Callable[[int], None]] = []
         self.last_error: AppError | None = None
         self._last_relaunch = 0.0
+        self.session_id: int | None = None
+        self.document_keys: set[str] = set()
         # Pantalla que se está capturando (la elegida o, si no está conectada, la principal).
         self.capture_selection: monitors.Selection | None = None
+        self._finisher: threading.Thread | None = None
+        self._finish_cancel = threading.Event()
+        self.saver = SaveWorker(self)
 
     # ------------------------------------------------------------ utilidades
+    @property
+    def lang(self) -> str:
+        return self.settings.source_code
+
     def set_notifier(self, notifier: Notifier) -> None:
         self._notifier = notifier
 
@@ -92,6 +122,10 @@ class WordLensApp:
 
     def on_error(self, listener: Callable[[AppError | None], None]) -> None:
         self._error_listeners.append(listener)
+
+    def on_review_ready(self, listener: Callable[[int], None]) -> None:
+        """listener(n) cuando termina una sesión y hay n entradas para revisar."""
+        self._review_listeners.append(listener)
 
     def _set_error(self, kind: str | None, message: str = "") -> None:
         self.last_error = AppError(kind, message) if kind else None
@@ -131,6 +165,50 @@ class WordLensApp:
             except Exception:
                 log.exception("No se pudo mostrar la notificación")
 
+    def counts(self) -> dict[str, int]:
+        return self.store.counts(self.lang)
+
+    @property
+    def finishing(self) -> bool:
+        return self._finisher is not None and self._finisher.is_alive()
+
+    # ------------------------------------------------------------- arranque
+    def boot(self) -> None:
+        """Al abrir la app: copia de la base de datos, guardar lo aceptado sin guardar
+        y terminar el trabajo que quedó a medias (subtítulos sin analizar, traducciones).
+        """
+        try:
+            self.store.backup()
+        except Exception:
+            log.exception("No se pudo copiar vocabulary.db")
+        if self.store.recovered:
+            self.notify(f"The vocabulary database was damaged and has been {self.store.recovered}.")
+        self.saver.start()
+        threading.Thread(target=self._resume_pending_work, name="resume", daemon=True).start()
+
+    def _resume_pending_work(self) -> None:
+        try:
+            engine = self.translator().engine_id
+            c = self.counts()
+            if c["lines"] or self.store.count_untranslated(self.lang, engine):
+                log.info("Trabajo pendiente al arrancar: %s", c)
+                with self._session_lock:
+                    if not self.state.is_active:
+                        self._start_finisher(open_review=False)
+        except Exception:
+            log.exception("No se pudo retomar el trabajo pendiente")
+
+    def _document_keys(self, *, quiet: bool = False) -> set[str]:
+        """Claves de las entradas que ya están en el documento (no se proponen)."""
+        s = self.settings
+        try:
+            existing = WordWriter(s.document, lang=s.source_code).read_expressions() if s.document.exists() else []
+        except (DocumentError, OSError):
+            if not quiet:
+                raise
+            return set()
+        return {k for k in (entry_key(e, s.source_code) for e in existing) if k}
+
     # --------------------------------------------------------------- sesión
     def start(self) -> bool:
         """Inicia una sesión de captura. No inicia una segunda si ya hay una activa."""
@@ -138,6 +216,7 @@ class WordLensApp:
             if self.state.is_active:
                 log.info("Ya hay una sesión activa; se ignora el inicio")
                 return False
+            self._cancel_finisher()
             for t in self._threads:
                 t.join(timeout=5)
             if any(t.is_alive() for t in self._threads):
@@ -146,9 +225,7 @@ class WordLensApp:
             self._threads = []
 
             s = self.settings
-            writer = WordWriter(
-                s.document, backup_count=s.backup_count, backup_dir=BACKUP_DIR, lang=s.source_code
-            )
+            writer = WordWriter(s.document, backup_count=s.backup_count, backup_dir=BACKUP_DIR, lang=s.source_code)
             try:
                 created = writer.ensure_exists()
                 if not created:
@@ -161,9 +238,7 @@ class WordLensApp:
                 )
             except (DocumentError, OSError) as exc:
                 return self._fail("document", f"Problem with the vocabulary document: {exc}")
-            self.writer = writer
-            self.dedup.reset(existing, lang=s.source_code)
-            self._recover_pending(writer)
+            self.document_keys = {k for k in (entry_key(e, s.source_code) for e in existing) if k}
 
             status = ollama_setup.check(self.client, s.ollama_model)
             if not status.ok:
@@ -175,95 +250,217 @@ class WordLensApp:
                 return self._fail(kind, status.message)
 
             self._stop_event = threading.Event()
-            self._queue = queue.Queue(maxsize=s.max_queue_lines)
             self.stats = SessionStats(started_at=time.time())
+            self.analyzer.known_names = set()
+            self.session_id = self.store.start_session(str(s.document))
             if not self.state.transition(AppState.CAPTURING):
                 return False
-            stop, q = self._stop_event, self._queue
+            stop = self._stop_event
             self._threads = [
-                threading.Thread(target=self._capture_loop, args=(stop, q), name="capture", daemon=True),
-                threading.Thread(target=self._analyzer_loop, args=(stop, q), name="analyzer", daemon=True),
+                threading.Thread(target=self._capture_loop, args=(stop,), name="capture", daemon=True),
+                threading.Thread(target=self._analyzer_loop, args=(stop,), name="analyzer", daemon=True),
             ]
             self._set_error(None)
             for t in self._threads:
                 t.start()
-            self.notify(f"Capturing. {len(existing)} expressions already in {s.document.name}.")
+            self.notify(f"Capturing. New vocabulary will be ready to review when you stop.")
             self._emit_stats()
             return True
 
     def stop(self) -> bool:
+        """Detiene la captura. Los subtítulos pendientes se terminan en segundo plano
+        y, al acabar, se abre la revisión (on_review_ready)."""
         with self._session_lock:
             if not self.state.is_active:
                 return False
             self._stop_event.set()
-            self.client.abort()
-            self.state.transition(AppState.STOPPED)
+            self.client.abort()  # la llamada en curso se repite al terminar: la línea sigue pendiente
+            self.state.transition(AppState.FINISHING)
         # Fuera del lock: esperar a los hilos sin bloquear un posible start().
         for t in self._threads:
             t.join(timeout=5)
-        self._flush_pending()
-        self.notify(f"Stopped. {self.stats.added} new expressions this session.")
-        self._emit_stats()
+        if self.session_id is not None:
+            self.store.end_session(self.session_id)
+        self._start_finisher(open_review=True)
         return True
 
     def shutdown(self) -> None:
+        """Salir de la app: nada se pierde (lo pendiente está en vocabulary.db)."""
         self.stop()
-        self._flush_pending(final=True)
+        self._cancel_finisher()
+        self.saver.stop()
+        if self.state.state is AppState.FINISHING:
+            self.state.transition(AppState.STOPPED)
+        self.store.close()
 
-    def _flush_pending(self, final: bool = False) -> None:
-        writer = self.writer
-        if writer is None or writer.pending_count == 0:
+    # ------------------------------------------------------- terminar sesión
+    def _start_finisher(self, *, open_review: bool) -> None:
+        if self.finishing:
             return
+        self._finish_cancel = threading.Event()
+        # Al arrancar la app (sin sesión) se vuelve a "Ready" al terminar; tras una sesión, a "Stopped".
+        back_to = AppState.INACTIVE if self.state.state is AppState.INACTIVE else AppState.STOPPED
+        if self.state.state is not AppState.FINISHING:
+            self.state.transition(AppState.FINISHING)
+        self._finisher = threading.Thread(
+            target=self._finish, args=(self._finish_cancel, open_review, back_to), name="finisher", daemon=True
+        )
+        self._finisher.start()
+
+    def _cancel_finisher(self) -> None:
+        thread = self._finisher
+        if thread is None or not thread.is_alive():
+            return
+        self._finish_cancel.set()
+        self.client.abort()
+        self.translate_client.abort()
+        thread.join(timeout=10)
+
+    def _finish(self, cancel: threading.Event, open_review: bool, back_to: AppState = AppState.STOPPED) -> None:
         try:
-            written = writer.add_entries([])
-            self._record_written(written)
-        except DocumentError:
-            if final:
-                self._dump_pending(writer)
+            if not self.document_keys:
+                self.document_keys = self._document_keys(quiet=True)
+            self._drain_lines(cancel)
+            if not cancel.is_set():
+                self.translate_pending(cancel)
+        except Exception:
+            log.exception("Error terminando la sesión")
+        finally:
+            self.stats.phase = ""
+            cancelled = cancel.is_set()
+            if not cancelled and self.state.state is AppState.FINISHING:
+                self.state.transition(back_to)
+            self._emit_stats()
+        if cancelled:
+            return
+        c = self.counts()
+        reviewable = c["pending"] + c["unsaved"]
+        log.info("Sesión terminada: %s", c)
+        if open_review:
+            if reviewable:
+                for listener in list(self._review_listeners):
+                    try:
+                        listener(reviewable)
+                    except Exception:
+                        log.exception("Error en listener de revisión")
+                self.notify(f"Stopped. {reviewable} words and expressions are ready to review.")
             else:
-                self.notify(
-                    f"{writer.pending_count} expressions are waiting: close the document in Word.",
-                    key="locked",
-                    every=60,
-                )
+                self.notify("Stopped. No new vocabulary this time.")
 
-    def _dump_pending(self, writer: WordWriter) -> None:
-        """Último recurso al salir con Word bloqueando el documento: no perder nada.
+    def _drain_lines(self, cancel: threading.Event) -> None:
+        """Analiza los subtítulos que quedaron pendientes (de esta sesión o de antes)."""
+        failures = 0
+        while not cancel.is_set():
+            left = self.store.count_pending_lines(self.lang)
+            if not left:
+                return
+            self.stats.phase = f"Analyzing {left} remaining subtitle{'s' if left != 1 else ''}…"
+            self._emit_stats()
+            if self._analyze_next_batch():
+                failures = 0
+                continue
+            failures += 1
+            if failures >= 3:
+                # Ollama no responde: los subtítulos siguen guardados y se analizarán más adelante.
+                self.notify(f"{left} subtitles could not be analyzed now (is Ollama running?). They are kept for later.")
+                return
+            cancel.wait(5)
 
-        Se guardan en la carpeta de datos de WordLens (no junto al documento) y se
-        recuperan automáticamente en la siguiente sesión con ese documento.
-        """
-        items = writer.take_pending()
-        if not items:
-            return
-        target = pending_file_for(writer.path)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        with target.open("a", encoding="utf-8") as fh:
-            for it in items:
-                fh.write(f"{it.expression} — {it.translation}\n")
-        log.warning("%d entradas pendientes guardadas en %s", len(items), target)
-
-    def _recover_pending(self, writer: WordWriter) -> None:
-        """Vuelve a encolar lo que quedó pendiente al salir la última vez."""
-        source = pending_file_for(writer.path)
-        if not source.exists():
-            return
-        items = []
-        for line in source.read_text(encoding="utf-8").splitlines():
-            expr, sep, trans = line.partition(" — ")
-            if sep and expr.strip() and trans.strip():
-                items.append(VocabularyItem(expr.strip(), trans.strip(), ""))
+    # ----------------------------------------------------------- traducción
+    def translator(self) -> Translator:
+        if self._translator is not None:
+            return self._translator
+        s = self.settings
+        model = s.translation_model or s.ollama_model
         try:
-            written = writer.add_entries(items)
-        except DocumentError:
-            log.warning("No se pudieron recuperar todavía las entradas pendientes de %s", source)
-            return
-        source.unlink(missing_ok=True)
-        self._record_written(written)
-        log.info("Recuperadas %d entradas pendientes de %s", len(written), source)
+            if model != s.ollama_model and not self.translate_client.has_model(model):
+                log.warning("Modelo de traducción %s no instalado; se traduce con %s", model, s.ollama_model)
+                model = s.ollama_model
+        except OllamaError:
+            pass
+        return OllamaTranslator(
+            self.translate_client, model, source=s.source_code, target=s.target_code, keep_alive=s.translation_keep_alive
+        )
+
+    def translate_pending(self, cancel: threading.Event | None = None) -> int:
+        """Traduce los candidatos sin traducción (o traducidos con otro motor). Devuelve cuántos.
+
+        Se agrupan por subtítulo: el motor ve la línea completa y todas las
+        unidades de esa línea. Si el motor falla, los candidatos se quedan sin
+        traducir (y se reintentan la próxima vez); nunca se pierden.
+        """
+        cancel = cancel or threading.Event()
+        translator = self.translator()
+        engine = translator.engine_id
+        rows = self.store.untranslated(self.lang, engine)
+        if not rows:
+            return 0
+        done = 0
+        results: list[tuple[str, str, str | None]] = []
+        groups: dict[str, list[tuple[str, str, str]]] = defaultdict(list)
+        for key, expression, kind, context in rows:
+            cached = self.store.cached_translation(self.lang, key, context, engine)
+            if cached:
+                results.append((key, context, cached))
+            else:
+                groups[context].append((key, expression, kind))
+        if results:
+            self.store.set_translations(self.lang, engine, results)
+            done += len(results)
+        total = len(rows)
+        failures = 0
+        for context, items in groups.items():
+            for i in range(0, len(items), TRANSLATE_BATCH):
+                if cancel.is_set():
+                    return done
+                chunk = items[i : i + TRANSLATE_BATCH]
+                self.stats.phase = f"Translating… {done}/{total}"
+                self._emit_stats()
+                try:
+                    out = translator.translate(context, [TranslationItem(e, k) for _, e, k in chunk])
+                except OllamaAborted:
+                    return done
+                except OllamaError as exc:
+                    log.warning("Fallo de traducción (%s); se reintentará más tarde", exc)
+                    failures += 1
+                    if failures >= 3:
+                        self.notify("Translations are not available right now (is Ollama running?). Will retry later.",
+                                    key="translate", every=300)
+                        return done
+                    continue
+                missing = [i for i, tr in enumerate(out) if not tr]
+                if missing:
+                    out = self._fallback_translate(translator, context, chunk, out, missing)
+                self.store.set_translations(
+                    self.lang, engine, [(key, context, tr) for (key, _, _), tr in zip(chunk, out, strict=True)]
+                )
+                done += len(chunk)
+        return done
+
+    def _fallback_translate(self, translator, context, chunk, out, missing) -> list[str | None]:
+        """Lo que el motor principal no tradujo (o tradujo con palabras inexistentes)
+        se intenta una vez con el modelo de extracción; si tampoco, queda pendiente."""
+        s = self.settings
+        if self._translator is not None or getattr(translator, "model", s.ollama_model) == s.ollama_model:
+            return out
+        backup = OllamaTranslator(
+            self.translate_client, s.ollama_model, source=s.source_code, target=s.target_code,
+            keep_alive=s.translation_keep_alive,
+        )
+        try:
+            extra = backup.translate(context, [TranslationItem(chunk[i][1], chunk[i][2]) for i in missing])
+        except OllamaError as exc:
+            log.warning("Tampoco se pudo traducir con %s: %s", s.ollama_model, exc)
+            return out
+        out = list(out)
+        for i, tr in zip(missing, extra, strict=True):
+            if tr:
+                log.info("Traducción de reserva (%s): %s -> %s", s.ollama_model, chunk[i][1], tr)
+                out[i] = tr
+        return out
 
     # ---------------------------------------------------------- hilo captura
-    def _capture_loop(self, stop: threading.Event, q: queue.Queue[SubtitleLine]) -> None:
+    def _capture_loop(self, stop: threading.Event) -> None:
         # Imports aquí: mss/WinRT deben inicializarse en este hilo.
         from wordlens.capture.screen_capture import (
             ChangeDetector,
@@ -343,7 +540,7 @@ class WordLensApp:
                         del image, shot  # nada de imágenes acumuladas en memoria
                     self.stats.frames += 1
                     for text in tracker.update(visible):
-                        self._enqueue(q, SubtitleLine(text, "screen", time.time()))
+                        self._enqueue(SubtitleLine(text, "screen", time.time()))
                     errors = 0
                 except Exception:
                     errors += 1
@@ -377,27 +574,19 @@ class WordLensApp:
             self._emit_stats()
         return selection
 
-    def _enqueue(self, q: queue.Queue[SubtitleLine], line: SubtitleLine) -> None:
+    def _enqueue(self, line: SubtitleLine) -> None:
+        """Guarda el subtítulo (persistente) y despierta al analizador."""
         log.info("Subtítulo nuevo: %s", line.text)
         self.stats.subtitles += 1
-        while True:
-            try:
-                q.put_nowait(line)
-                return
-            except queue.Full:
-                try:
-                    q.get_nowait()
-                    self.stats.dropped += 1
-                    log.warning("Cola llena: el LLM va por detrás; se descarta la línea más antigua")
-                except queue.Empty:
-                    pass
+        self.store.add_line(line.text, self.lang, self.session_id)
+        self._wake.set()
 
-    # ---------------------------------------------------------- hilo análisis
     def submit_text(self, text: str) -> None:
         """Permite inyectar texto en la sesión activa (pruebas / depuración)."""
-        self._enqueue(self._queue, SubtitleLine(text, "manual", time.time()))
+        self._enqueue(SubtitleLine(text, "manual", time.time()))
 
-    def _analyzer_loop(self, stop: threading.Event, q: queue.Queue[SubtitleLine]) -> None:
+    # ---------------------------------------------------------- hilo análisis
+    def _analyzer_loop(self, stop: threading.Event) -> None:
         s = self.settings
         try:
             self.client.warm_up(s.ollama_model, s.ollama_keep_alive)
@@ -407,48 +596,58 @@ class WordLensApp:
         except OllamaError as exc:
             log.warning("No se pudo precargar el modelo: %s", exc)
 
-        last_retry = time.monotonic()
         while not stop.is_set():
-            try:
-                first = q.get(timeout=0.5)
-            except queue.Empty:
-                if self.writer and self.writer.pending_count and time.monotonic() - last_retry > 10:
-                    last_retry = time.monotonic()
-                    self._write([])
+            if not self.store.count_pending_lines(self.lang):
+                self._wake.wait(0.5)
+                self._wake.clear()
                 continue
-            batch = [first.text]
-            deadline = time.monotonic() + s.batch_wait_seconds
-            while len(batch) < s.batch_max_lines and not stop.is_set():
-                remaining = deadline - time.monotonic()
-                if remaining <= 0:
-                    break
-                try:
-                    batch.append(q.get(timeout=remaining).text)
-                except queue.Empty:
-                    break
-            if stop.is_set():
-                break
             if not self.state.transition(AppState.PROCESSING, only_from={AppState.CAPTURING}):
                 break
             try:
-                self.stats.llm_calls += 1
-                items = self.analyzer.analyze(batch)
-                if not stop.is_set() or items:
-                    self._write(self.dedup.filter_new(items))
-            except OllamaAborted:
-                break
-            except OllamaUnavailableError as exc:
-                log.warning("Ollama no responde: %s", exc)
-                self.notify("Ollama is not responding. Trying to reconnect…", key="ollama", every=120)
-                self._try_relaunch_ollama(stop)
-            except OllamaError as exc:
-                log.error("Error del LLM: %s", exc)
-                self.notify(f"AI model error: {exc}", key="llm", every=120)
-            except Exception:
-                log.exception("Error inesperado analizando %s", batch)
+                ok = self._analyze_next_batch()
             finally:
                 self.state.transition(AppState.CAPTURING, only_from={AppState.PROCESSING})
                 self._emit_stats()
+            if not ok and not stop.is_set():
+                self._try_relaunch_ollama(stop)
+
+    def _analyze_next_batch(self) -> bool:
+        """Analiza el siguiente lote de subtítulos pendientes. False si el modelo falló.
+
+        Las líneas sólo se marcan como analizadas junto con sus candidatos (en
+        la misma transacción): si algo falla, siguen pendientes.
+        """
+        batch = self.store.pending_lines(self.lang, max(1, self.settings.batch_max_lines))
+        if not batch:
+            return True
+        ids = [i for i, _ in batch]
+        try:
+            self.stats.llm_calls += 1
+            candidates = self.analyzer.analyze([t for _, t in batch])
+        except OllamaAborted:
+            return False
+        except OllamaUnavailableError as exc:
+            log.warning("Ollama no responde: %s", exc)
+            self.notify("Ollama is not responding. Subtitles are kept and will be analyzed later.", key="ollama", every=120)
+            return False
+        except OllamaError as exc:
+            log.error("Error del modelo: %s", exc)
+            self.notify(f"AI model error: {exc}", key="llm", every=120)
+            return False
+        except Exception:
+            log.exception("Error inesperado analizando %s", batch)
+            # Una línea que rompe el análisis no debe bloquear las demás para siempre.
+            self.store.finish_lines(ids, [], self.lang, self.session_id)
+            return True
+        added = self.store.finish_lines(ids, candidates, self.lang, self.session_id, self.document_keys)
+        if added:
+            self.stats.added += len(added)
+            self.stats.last_added = (
+                [c.expression for c in candidates if entry_key(c.expression, self.lang) in set(added)]
+                + self.stats.last_added
+            )[:5]
+            log.info("Candidatos nuevos: %s", added)
+        return True
 
     def _try_relaunch_ollama(self, stop: threading.Event) -> None:
         """Ollama se ha cerrado durante la sesión: intenta arrancarlo (como mucho cada minuto)."""
@@ -464,38 +663,116 @@ class WordLensApp:
                     stop.wait(1)
         stop.wait(5)
 
-    def _write(self, items: list[VocabularyItem]) -> None:
-        if self.writer is None:
-            return
-        try:
-            written = self.writer.add_entries(items)
-        except DocumentLockedError:
-            self.notify(
-                "Can't save: close the document in Word (new expressions are kept until then).",
-                key="locked",
-                every=60,
-            )
-            return
-        except DocumentError as exc:
-            self.notify(f"Error writing the document: {exc}", key="docerr", every=60)
-            return
-        self._record_written(written)
+    # ---------------------------------------------------------- revisión
+    def review_entries(self):
+        return self.store.review_entries(self.lang)
 
-    def _record_written(self, written: list[VocabularyItem]) -> None:
-        for item in written:
-            self.dedup.add(item.expression)
-            log.info("AÑADIDO: %s — %s   [%s]", item.expression, item.translation, item.context)
-        if written:
-            self.stats.added += len(written)
-            self.stats.last_added = ([w.expression for w in written] + self.stats.last_added)[:5]
-            self._emit_stats()
+    def accept(self, key: str, translation: str | None = None) -> bool:
+        """✓ en la revisión: registra la aceptación y pide al escritor que la guarde."""
+        ok = self.store.accept(self.lang, key, str(self.settings.document), translation)
+        if ok:
+            log.info("Aceptado: %s", key)
+            self.saver.wake()
+        return ok
+
+    def exclude(self, key: str) -> bool:
+        """✕ en la revisión: a la lista de exclusión (en vocabulary.db, nunca en Word)."""
+        ok = self.store.exclude(self.lang, key)
+        if ok:
+            log.info("Excluido: %s", key)
+        return ok
 
     @property
     def document_path(self) -> Path:
         return self.settings.document
 
 
-def pending_file_for(document: Path) -> Path:
-    """Archivo de pendientes de un documento, dentro de la carpeta de datos."""
-    digest = hashlib.sha1(str(document.resolve()).lower().encode("utf-8")).hexdigest()[:8]
-    return PENDING_DIR / f"{document.stem}_{digest}.pending.txt"
+class SaveWorker:
+    """Escribe en Word las entradas aceptadas que aún no están confirmadas.
+
+    Estados de una entrada aceptada (tabla accepted):
+      pending  aceptada, todavía no confirmada en el documento (puede tener un
+               error recuperable: documento abierto en Word, carpeta protegida…)
+      written  confirmada: se ha vuelto a leer el documento y está.
+    Un reintento tras un resultado incierto no duplica nada: lo que ya está en
+    el documento cuenta como guardado. Sólo se escribe en el documento
+    seleccionado en ese momento.
+    """
+
+    RETRY_SECONDS = 15.0
+
+    def __init__(self, app: WordLensApp) -> None:
+        self.app = app
+        self._event = threading.Event()
+        self._stop = threading.Event()
+        self._thread: threading.Thread | None = None
+        self._backed_up: set[str] = set()
+        self.last_error: str | None = None
+
+    def start(self) -> None:
+        if self._thread is None or not self._thread.is_alive():
+            self._stop.clear()
+            self._thread = threading.Thread(target=self._run, name="saver", daemon=True)
+            self._thread.start()
+
+    def stop(self) -> None:
+        self._stop.set()
+        self._event.set()
+        if self._thread is not None:
+            self._thread.join(timeout=10)
+
+    def wake(self) -> None:
+        self._event.set()
+        if self._thread is None:
+            self.save_now()  # sin hilo (pruebas): guardar en el acto
+
+    def _run(self) -> None:
+        while not self._stop.is_set():
+            pending = self.save_now()
+            self._event.wait(self.RETRY_SECONDS if pending else 3600)
+            self._event.clear()
+
+    def save_now(self) -> int:
+        """Un intento de guardado. Devuelve cuántas entradas siguen sin guardar."""
+        app = self.app
+        entries = app.store.unsaved(app.lang)
+        if not entries:
+            self.last_error = None
+            return 0
+        s = app.settings
+        doc = s.document
+        writer = WordWriter(doc, backup_count=s.backup_count, backup_dir=BACKUP_DIR, lang=s.source_code)
+        keys = [e.key for e in entries]
+        try:
+            if str(doc) not in self._backed_up and doc.exists():
+                writer.backup()
+                self._backed_up.add(str(doc))
+            confirmed = writer.save_confirmed(
+                [VocabularyItem(e.expression, e.translation, e.context) for e in entries]
+            )
+        except (DocumentError, OSError) as exc:
+            if isinstance(exc, DocumentLockedError) or (isinstance(exc, OSError) and is_lock_error(exc)):
+                message = f"{doc.name} is open in another program. Close it in Word and it will be saved automatically."
+                return self._failed(keys, message, "locked")
+            return self._failed(keys, f"Couldn't save to {doc.name}: {exc}", "docerr")
+        except StoreError as exc:
+            log.error("Error del almacén al guardar: %s", exc)
+            return len(keys)
+        # La clave del documento puede diferir de la del almacén si cambió el idioma.
+        by_doc_key = {entry_key(e.expression, s.source_code): e.key for e in entries}
+        written = [by_doc_key[k] for k in confirmed if k in by_doc_key]
+        app.store.mark_written(app.lang, written, str(doc))
+        missing = [k for k in keys if k not in set(written)]
+        if missing:
+            return self._failed(missing, f"Not confirmed in {doc.name}; will retry.", "docerr")
+        self.last_error = None
+        for e in entries:
+            log.info("GUARDADO en Word: %s — %s", e.expression, e.translation)
+        return 0
+
+    def _failed(self, keys: list[str], message: str, notice_key: str) -> int:
+        log.warning("No se pudo guardar (%d entradas): %s", len(keys), message)
+        self.last_error = message
+        self.app.store.mark_write_failed(self.app.lang, keys, message)
+        self.app.notify(message, key=notice_key, every=120)
+        return len(keys)

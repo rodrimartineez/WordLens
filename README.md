@@ -1,14 +1,16 @@
 # WordLens
 
-**WordLens reads the subtitles on your screen while you watch a series or film, picks out the vocabulary worth learning, and adds it — translated — to a Word document.**
+**WordLens reads the subtitles on your screen while you watch a series or film, collects every word and expression in them, translates each one in context, and lets you choose — with ✓ or ✕ — what goes into your Word vocabulary document.**
 
-> **figure out** — averiguar / descubrir
-> **take for granted** — dar por sentado
-> **overwhelmed** — abrumado / sobrepasado
+> **brush off** — restar importancia a
+> **go ahead with** — seguir adelante con
+> **deal** — acuerdo
 
-It is a normal Windows desktop app: install it, open it from the Start menu, press **Start**, and keep watching. Everything runs on your computer: screen capture, OCR, the AI model (via Ollama) and the document. Nothing is sent to the internet.
+It is a normal Windows desktop app: install it, open it from the Start menu, press **Start**, and keep watching. New words appear in the **vocabulary panel** of the main window as they are detected, ready to review. Everything runs on your computer: screen capture, OCR, the AI models (via Ollama), the translations and the document. Nothing is sent to the internet and nothing costs money.
 
 ![WordLens main window](docs/screenshot.png)
+
+![Vocabulary panel with undo](docs/review.png)
 
 ---
 
@@ -17,12 +19,16 @@ It is a normal Windows desktop app: install it, open it from the Start menu, pre
 - **Real-time subtitle capture** — reads the top and bottom thirds of the screen every 0.5 s (in memory only, never saved to disk).
 - **Capture screen selection** — with two or more monitors, choose the one where the video plays (*Capture screen* in the window; *Identify* shows each screen's number on it). The choice survives disconnecting and reconnecting monitors.
 - **OCR** — the native Windows OCR engine (~15–35 ms per band), tuned for white/yellow subtitles.
-- **Local AI vocabulary extraction** — a local LLM (Ollama) reads the **whole** sentence and keeps **every** item worth learning at upper-B2, C1 or C2 level — advanced words, phrasal verbs, idioms, collocations — so one subtitle can add 0, 1, 2, 3 or more entries. Basic vocabulary, names, cognates and OCR errors are discarded.
-- **Translation** — each expression gets a short translation for its meaning *in that context*.
+- **Exhaustive vocabulary extraction** — every lexical unit of each subtitle: nouns, verbs, adjectives, adverbs, slang and insults, phrasal verbs, idioms, collocations and colloquial expressions. **No difficulty filter**: WordLens does not guess what you already know — you decide in the review. Only grammar words (articles, pronouns, prepositions, auxiliaries…), grammar patterns (*I have to*, *going to*), names and OCR noise are left out.
+- **Contextual translation, free** — each word or expression is translated with the whole subtitle as context (*deal* → *acuerdo* in a business sentence, *repartir* at a card table) by a local model (`gemma3:4b`, chosen after comparing alternatives). No API, no account, no cost.
+- **Vocabulary panel** — always visible in the main window and updated live while you watch: **✓** adds a word to your document, **✕** hides it for good. Each decision can be undone for a few seconds (**Undo** / `Ctrl + Z`); translations are corrected in place (double-click or `E`); filter by type (words, phrasal verbs, idioms, expressions), sort by most recent or most frequent, and review without the mouse (`↑ ↓`, `A`, `X`, `Ctrl + F`). Pending words are kept even if you restart Windows.
+- **Dark and light themes** — *Settings → General → Appearance*.
+- **Excluded vocabulary** — words you reject are never suggested again; manage the list in *Settings → Excluded vocabulary* (search, restore). Excluding *nail* does not hide *hit the nail on the head*; *give up* and *give in* are different entries.
+- **Remembers what you accepted** — an accepted word is never suggested again, even if you later delete it from the document or switch documents.
 - **Two language directions** — English subtitles → Spanish translations, or Spanish subtitles → English translations.
-- **Automatic deduplication** — `figure out`, `Figure out`, `to figure out` and `figure it out` are the same entry; `get at` and `get out` are not.
-- **Word vocabulary document** — one permanent `.docx` you choose; new entries are appended at the end with **bold expression** — translation.
-- **Safe writing** — atomic saves, rotating backups, and nothing is lost if the document is open in Word.
+- **Automatic deduplication** — a word seen 50 times in a session appears once in the review; `figure out`, `Figure out`, `to figure out` and `figure it out` are the same entry; `get at` and `get out` are not.
+- **Word vocabulary document** — one permanent `.docx` you choose; accepted entries are appended at the end with **bold expression** — translation.
+- **Safe writing** — atomic saves, rotating backups, every save verified by re-reading the file; if the document is open in Word, accepted entries wait (visibly) and are written automatically, never twice.
 - **Global hotkeys** — `Ctrl + Shift + V` to start, `Ctrl + Shift + X` to stop, from any app (configurable).
 - **System tray** — keeps working in the background; open, start, stop, change document, settings and exit from the tray icon.
 
@@ -34,7 +40,8 @@ It is a normal Windows desktop app: install it, open it from the Start menu, pre
 | --- | --- | --- |
 | **Windows 10 (2004+) or 11, 64-bit** | Native OCR, hotkeys, tray | |
 | **[Ollama](https://ollama.com/download/windows)** | Runs the AI model locally | Installed separately, once |
-| **AI model** `maternion/ling-3.0-tiny:8b` | Vocabulary analysis | ~5.3 GB, downloaded once from inside WordLens (it asks first) |
+| **AI model** `maternion/ling-3.0-tiny:8b` | Vocabulary extraction | ~5.3 GB, downloaded once from inside WordLens (it asks first) |
+| **Translation model** `gemma3:4b` (recommended) | Contextual translations | ~3.3 GB, `ollama pull gemma3:4b`. Without it WordLens translates with the extraction model (lower quality) |
 | Windows OCR language pack for your subtitle language | Reading subtitles | English is usually already installed; see *Troubleshooting* for Spanish |
 | 16 GB RAM recommended | The model uses ~5.5 GB | An NVIDIA GPU makes it faster but is not required |
 
@@ -47,10 +54,12 @@ Python is **not** required to use the installed app.
 ## Installation
 
 1. Install **Ollama** from <https://ollama.com/download/windows> (or `winget install Ollama.Ollama`).
-2. Run **`WordLens-Setup-1.0.0.exe`**.
+2. Run **`WordLens-Setup-1.2.0.exe`**.
    - By default it installs for your user only (no administrator rights): `%LOCALAPPDATA%\Programs\WordLens`. You can choose *install for all users* (`C:\Program Files\WordLens`) in the first dialog.
    - Optionally tick *Create a desktop shortcut*.
 3. Press the **Windows key**, type **WordLens**, and open it.
+
+**Updating from 1.x:** run the new installer over the old one (close WordLens first or let the installer close it). Your settings, document and data folder are kept. On the first start WordLens copies `config.json` (and any old pending entries) to `backups\migration_<date>\`, creates `vocabulary.db` and registers the entries already in your document as *accepted*, so they are never suggested again. Your document is not modified.
 
 **Uninstall:** *Settings → Apps → Installed apps → WordLens → Uninstall* (or from the Start menu entry). The uninstaller asks whether to also delete WordLens settings and logs. **Your vocabulary document is never deleted.**
 
@@ -76,26 +85,29 @@ You can change the languages and the document at any time from the main window (
 2. Press **Start** (or `Ctrl + Shift + V` from anywhere).
 3. Play your video **with subtitles**, ideally full screen. If you have several monitors, pick the one with the video under **Capture screen** (see below).
 4. Minimise or close the window — WordLens keeps working from the **system tray** (the icon may be under the `^` arrow next to the clock).
-5. New expressions are appended to your document as they appear.
-6. Press **Stop** (or `Ctrl + Shift + X`).
+5. Press **Stop** (or `Ctrl + Shift + X`). WordLens finishes the subtitles it still had to analyse, translates the new words (*Finishing…*) and brings the main window to the front with the vocabulary panel.
+6. For each entry press **✓** (add to your document) or **✕** (never suggest it again) — or select it with `↑ ↓` and press `A` / `Enter` or `X` / `Delete`. A bar offers **Undo** for a few seconds (`Ctrl + Z`) before the decision is applied. Double-click a translation (or press `E`) to correct it in place. *Accept all* / *Exclude all* apply to the entries shown (after a confirmation); the search box and the type filters narrow the list; *Sort: Frequent* puts the most repeated words first; hovering an entry shows the subtitle it came from. Close the window at any time: the rest stays pending (the tray menu also shows **Review vocabulary (N)…**).
 
 | Status | Meaning |
 | --- | --- |
 | ● **Ready** | Waiting for you to press Start |
 | ● **Capturing** | Reading subtitles (green dot on the tray icon) |
 | ● **Processing** | The AI is analysing new lines; capture continues in parallel |
+| ● **Finishing** | After Stop: analysing the remaining subtitles and translating; then the window comes to the front |
 | ● **Stopped** | Session finished; press Start for a new one |
 | ● **Error** | Something needs attention — the window explains what and offers the fix (e.g. *Download model…*) |
 
-**Tray menu** (right-click the icon): Open WordLens · Start · Stop · Open vocabulary document · Change vocabulary document… · Settings… · Exit.
+**Tray menu** (right-click the icon): Open WordLens · Start · Stop · Review vocabulary (N)… · Open vocabulary document · Change vocabulary document… · Settings… · Exit.
 
 Closing or minimising the window **never** stops WordLens; only **Exit** in the tray menu does. Opening WordLens again from the Start menu brings back the existing window.
 
 **Capture screen.** WordLens lists the monitors Windows reports: *Screen 1* is the main one, the rest follow from left to right. With a single monitor the choice is fixed; with several, choose the one where the subtitles appear — the subtitle bands (top and bottom thirds) are taken from that screen. Click **Identify** to see each number on its screen. You can change it while capturing (it applies within a second). If the chosen monitor is disconnected, WordLens warns you and captures the main screen meanwhile; when you plug it back in, it returns to it automatically. The list updates by itself when monitors are connected or disconnected.
 
-**Settings** (link at the bottom of the window, or the tray menu): AI model, hotkeys, notifications, plus links to the log, the data folder and the advanced `config.json`.
+**Settings** (link at the bottom of the sidebar, or the tray menu): AI model, translation model, appearance (dark / light), hotkeys, notifications, **Excluded vocabulary** (search, restore — restoring only lets the word be suggested again, it does not add it to your document), plus links to the log, the data folder and the advanced `config.json`.
 
-> **Tip:** you can keep the document open in Word to watch it grow, but Word locks the file. WordLens keeps new entries waiting and writes them as soon as you close Word. If you exit while Word still has it open, they are saved in WordLens' data folder and added automatically next session.
+> **Tip:** you can keep the document open in Word, but Word locks the file. Entries you accept meanwhile show *not saved yet* in the review and are written automatically (checked every 15 s) as soon as you close Word — also after restarting WordLens.
+
+**Changing the document.** Accepted and excluded words are global: they are remembered whatever document you use, so switching documents never brings back words you already decided on. WordLens only ever writes into the document currently selected and never modifies or deletes other documents.
 
 ### What happens with Ollama
 
@@ -117,8 +129,10 @@ The status of the AI is always visible at the bottom of the window.
 | Application (read-only) | `%LOCALAPPDATA%\Programs\WordLens\` (or `C:\Program Files\WordLens\`) |
 | Settings — `config.json` | `%LOCALAPPDATA%\WordLens\` |
 | Logs — `logs\wordlens.log` (rotated, max ~8 MB) | `%LOCALAPPDATA%\WordLens\logs\` |
+| **Vocabulary data** — `vocabulary.db` (words pending review, accepted and excluded vocabulary, unsaved acceptances, subtitles not analysed yet, translation cache) | `%LOCALAPPDATA%\WordLens\` |
+| Backups of `vocabulary.db` (last 10, one per start) | `%LOCALAPPDATA%\WordLens\backups\vocabulary\` |
 | Document backups (last 10, one per session) | `%LOCALAPPDATA%\WordLens\backups\` |
-| Entries waiting while Word locked the document | `%LOCALAPPDATA%\WordLens\pending\` |
+| Copies made when updating from 1.x (`config.json`, old pending entries) | `%LOCALAPPDATA%\WordLens\backups\migration_<date>\`, `backups\config_<date>.json` |
 | **Your vocabulary document** | Wherever you chose, e.g. `D:\Inglés\Series B2-C1.docx` |
 
 WordLens never writes in its installation folder and never puts its own files next to your document.
@@ -137,8 +151,10 @@ WordLens never writes in its installation folder and never puts its own files ne
 | **Black capture (Netflix, Disney+, Prime…)** | DRM protection. In Chrome/Edge, disable *Settings → System → Use graphics acceleration* and restart the browser. Local players (VLC, MPC-HC) and YouTube work. |
 | **Spanish subtitles not read** | Install the Spanish OCR pack: *Settings → Time & language → Language & region → Add a language → Español (España)*, or in an admin PowerShell: `Add-WindowsCapability -Online -Name "Language.OCR~~~es-ES~0.0.1.0"` (use `en-US` for English). |
 | **"Windows is blocking WordLens from writing in this folder"** | Windows Defender *Controlled folder access* protects Documents, Desktop, Pictures… Choose a folder outside them (e.g. `%USERPROFILE%\WordLens` or `D:\Inglés`), or allow `WordLens.exe` in *Windows Security → Virus & threat protection → Ransomware protection → Allow an app through Controlled folder access*. |
-| **"Can't save: close the document in Word"** | Close the document; waiting entries are written automatically. |
-| **Slow / some lines skipped** | On a 4 GB GPU the model takes ~1 s per line. In very dense dialogue the oldest queued lines may be dropped (logged). Close GPU-heavy apps. |
+| **"…is open in another program. Close it in Word"** | Close the document; accepted entries are written automatically (they stay in the review marked *not saved yet* until then). |
+| **"Translation pending…" in the review** | The translation model was not available. Check Ollama is running and `gemma3:4b` is installed (`ollama pull gemma3:4b`); they are retried automatically. |
+| **Finishing takes a while** | On a 4 GB GPU extraction takes ~2 s per subtitle and runs during the session; after Stop only what is left is analysed, then the translations (~4 s per subtitle). No subtitle is dropped: if you exit, the remaining work continues next time. |
+| **"The vocabulary database was damaged"** | WordLens sets the damaged file aside (`vocabulary.damaged_*.db`, never deleted) and restores the latest backup from `backups\vocabulary\`. |
 
 ---
 
@@ -174,12 +190,12 @@ Other options: `--start` (start capturing immediately), `--hidden` (tray only), 
 .venv\Scripts\python.exe -m pytest
 ```
 
-They cover real OCR on synthetic subtitle images (noise, gradients, yellow text, two lines, clocks, side text, Spanish), real screen capture, subtitle stability and history, language filtering, normalisation and deduplication for both languages, broken LLM JSON, vocabulary validation, cognates, the Word writer (existing documents, corrupt files, Word locks, backups, pending recovery), the state machine, global hotkeys fired with real key presses, Ollama status detection, settings and data-folder isolation, several items per subtitle (scripted model and real model: 0, 1, 2, 3 and 4 items, no basic words), capture screen selection (one, two and three screens, disconnection and reconnection, and real OCR on each connected monitor), and the real model.
+They cover exhaustive extraction (the required examples, phrasal verbs, idioms, slang, names, OCR errors, case and punctuation, repeated candidates, no difficulty filter, no free word combinations), contextual translation (parsing, invented words, fallback, engine changes, cost-zero checks), the vocabulary store (dedup of 50 occurrences, exclusions of single words vs. whole expressions, *give up* ≠ *give in*, restore, acceptance precedence, persistence, damaged-database recovery), the review flow end to end with a real `.docx` (Stop → finish → review, ✓ to Word, ✕ to the exclusion list, locked documents with real Windows locks, uncertain writes not duplicated, other documents untouched, bulk actions with partial failures, Ollama down, crash recovery), migration from 1.1 data, the vocabulary panel (live updates, undo, keyboard, inline editing, filters, themes) and the excluded-vocabulary dialog with real Tk widgets, real OCR on synthetic subtitle images (noise, gradients, yellow text, two lines, clocks, side text, Spanish), real screen capture, subtitle stability and history, language filtering, normalisation and deduplication for both languages, broken LLM JSON, vocabulary validation, cognates, the Word writer (existing documents, corrupt files, Word locks, backups, pending recovery), the state machine, global hotkeys fired with real key presses, Ollama status detection, settings and data-folder isolation, several items per subtitle (scripted model and real model: 0, 1, 2, 3 and 4 items, no basic words), capture screen selection (one, two and three screens, disconnection and reconnection, and real OCR on each connected monitor), and the real model.
 
 **Developer tools:**
 
 ```bash
-.venv\Scripts\python.exe tools\try_text.py --dry-run "I couldn't figure out what he was getting at."
+.venv\Scripts\python.exe tools\try_text.py "He brushed off my concerns and went ahead with the deal."
 ```
 
 ```bash
@@ -190,17 +206,19 @@ They cover real OCR on synthetic subtitle images (noise, gradients, yellow text,
 .venv\Scripts\python.exe tools\diagnose.py
 ```
 
-`try_text.py` analyses sentences with the real model; `subtitle_simulator.py` shows full-screen fake subtitles (with `--file`, one per line, `top:` prefix for the top band; `--screen 2` to use another monitor) to test the whole chain; `diagnose.py` checks every component.
+`try_text.py` shows the candidates and translations for sentences with the real models (it writes nothing); `subtitle_simulator.py` shows full-screen fake subtitles (with `--file`, one per line, `top:` prefix for the top band; `--screen 2` to use another monitor) to test the whole chain; `diagnose.py` checks every component.
 
-**Extraction benchmark** — 61 annotated sentences (0 to 4 items each, B1 to C2, real subtitles, names, OCR errors, cognates) in `tests/benchmark/extraction_cases.json`. It reports found / missed / false positives, precision, recall, translation accuracy and how many multi-item sentences come out complete. `--impl` evaluates another copy of the code with the same scoring, to compare versions:
+**Benchmarks** (real models; results of 1.2 in `docs/benchmarks/`, analysis in [`docs/evaluacion-1.2.md`](docs/evaluacion-1.2.md)):
 
 ```bash
-.venv\Scripts\python.exe tools\benchmark_extraction.py --details
+.venv\Scripts\python.exe tools\benchmark_exhaustive.py --details
 ```
 
 ```bash
-.venv\Scripts\python.exe tools\benchmark_extraction.py --batch 2 --out new.json
+.venv\Scripts\python.exe tools\benchmark_translation.py --engine ollama:gemma3:4b --details
 ```
+
+`benchmark_exhaustive.py` — 50 subtitles with 124 expected lexical units (`tests/benchmark/exhaustive_cases.jsonl`): recall, precision, forbidden items, duplicates; `--impl DIR` scores another copy of the code (e.g. 1.1) the same way. `benchmark_translation.py` — 80 subtitles, 117 units with reviewed reference translations (`tests/benchmark/translation_cases.jsonl`); engines `ollama:<model>`, `argos`, `mymemory`. `benchmark_extraction.py` is the 1.1 benchmark (selective B2+ extraction), kept for reference.
 
 `WORDLENS_CAPTURE_VISIBLE=1` lets screenshot tools see WordLens' own windows (normally they are hidden from screen capture so WordLens doesn't read its own interface as a subtitle).
 
@@ -236,10 +254,10 @@ dist\WordLens\WordLens.exe --self-test
 ```
 
 ```bash
-"%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" /DAppVersion=1.0.0 packaging\installer.iss
+"%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" /DAppVersion=1.2.0 packaging\installer.iss
 ```
 
-The version comes from `wordlens/__init__.py`. Silent install for automation: `WordLens-Setup-1.0.0.exe /VERYSILENT /CURRENTUSER`; silent uninstall: `"%LOCALAPPDATA%\Programs\WordLens\unins000.exe" /VERYSILENT`.
+The version comes from `wordlens/__init__.py`. Silent install for automation: `WordLens-Setup-1.2.0.exe /VERYSILENT /CURRENTUSER`; silent uninstall: `"%LOCALAPPDATA%\Programs\WordLens\unins000.exe" /VERYSILENT`.
 
 ### Packaging choices
 
@@ -263,19 +281,23 @@ Start ─▶ every 0.5 s: capture top 33 % and bottom 33 % of the chosen screen 
             ▼
          New?  seen in 2 consecutive frames, not processed in the last 3 min
             ▼  only new text
-         Candidates (no AI): less common words + verb/particle pairs, sent as a checklist
+         Saved in vocabulary.db (lines)  ── nothing is dropped, even if the AI is slow or down
+            ▼  analysed in the background, one subtitle per call
+         Extraction model (ling, Ollama): every expression + content word, dictionary form, type
+         + rules: every content word of the line (safety net for what the model skips)
             ▼
-         Local LLM (Ollama): reads the whole line, returns EVERY item worth learning → JSON
+         Deterministic validation: must be in the subtitle; no grammar words, grammar
+         patterns ("have to"), names, non-words or whole sentences. NO difficulty filter.
+         Words inside a detected phrasal verb/idiom are not repeated.
             ▼
-         Second look (only if needed): less common words it did not evaluate, one by one
+         Already accepted / excluded / in the document?  (normalised entry key)
+            ▼  new ones (a repeated one just counts +1)
+         candidates (pending review)
+  Stop ─▶ finish the remaining subtitles ─▶ translate new candidates with gemma3:4b,
+         whole subtitle as context ─▶ vocabulary panel (live)
             ▼
-         Deterministic validation: drops basic words, cognates, names, OCR errors,
-         whole sentences, invented expressions; recovers items from broken JSON;
-         "incredibly tacky" → "tacky"; keeps the longest of overlapping units
-            ▼
-         Already in the document?  (normalised comparison)
-            ▼  only new ones
-         Appended to the .docx  (atomic write + backups)
+         ✓ → accepted (pending write) → written to the .docx, re-read, confirmed
+         ✕ → excluded (never suggested again; Settings › Excluded vocabulary)
 ```
 
 WordLens' own windows are excluded from screen capture (`WDA_EXCLUDEFROMCAPTURE`), so its interface is never mistaken for a subtitle.
@@ -285,6 +307,12 @@ WordLens' own windows are excluded from screen capture (`WDA_EXCLUDEFROMCAPTURE`
 Measured on the development machine: i7-11800H, 16 GB RAM, RTX 3050 Ti Laptop (4 GB), Windows 11, Ollama 0.40.
 
 **AI model — `maternion/ling-3.0-tiny:8b`.** Mixture-of-Experts, 7.9 B total / 1.3 B active parameters per token, 5.3 GB (Q4_K_M). On a 4 GB GPU, ~42 % runs on the GPU and the rest on CPU. Thanks to Ollama's prefix cache (the fixed ~560-token prompt is reused) a line takes **~1 s** including any expressions found; the first load takes ~40–80 s and is done when the session starts. Good at phrasal verbs, idioms and advanced words and at lemmatising; weak points are proposing basic words or cognates (filtered deterministically) and occasional imprecise translations. Compared with the same prompt: `qwen3.5:4b` was slightly more precise but slower; `mistral 7B` translated worse ("estar bajo mi piel"). Any Ollama model can be selected in *Settings*.
+
+**Exhaustive extraction and review (1.2).** WordLens no longer guesses what you know: it proposes every lexical unit and you decide with ✓ / ✕. The 1.1 prompt asked only for "upper-B2/C1/C2" items and the validator dropped frequent words, cognates and "trivial" combinations — on an exhaustive benchmark (50 subtitles, 124 expected units, same `ling` model) 1.1 found 33 (recall 0.27), 1.2 finds 119 (**recall 0.96, precision 0.95**, 46/50 subtitles complete, ~2 s per subtitle). The model now only identifies (no translation, a `type` field), rules add every content word it skips, and translation is a separate step. Full analysis: [`docs/evaluacion-1.2.md`](docs/evaluacion-1.2.md).
+
+**Translation — `gemma3:4b`, local (1.2).** Compared on 117 units in 80 subtitles (polysemy, phrasal verbs, idioms, slang, collocations, negation, irony) against reviewed references: gemma3:4b 83.8 % automatic / ~91–93 % after manual review, ling 75.2 %, mistral:7b 66.7 %, qwen2.5:3b 55.6 %, MyMemory 44.4 %, Argos Translate 28.2 % (the last two cannot use context: *brush off* → "cepillo apagado"). Google Cloud Translation, DeepL API and Azure Translator were ruled out because they require billing or a credit card. gemma3:4b runs in Ollama on this PC: no account, key, card, quota or network — it cannot cost anything. Translations run after Stop (so they don't compete with extraction on a 4 GB GPU), are cached per (unit, subtitle, engine) and regenerate automatically if the engine or prompt changes. Options with words that don't exist in Spanish are discarded; anything gemma can't translate is retried with the extraction model.
+
+**Vocabulary state — SQLite (1.2).** `vocabulary.db` (Python's built-in `sqlite3`, no new dependency) is the single source of truth: subtitles not yet analysed, pending candidates, accepted entries with their write state, exclusions and the translation cache. Every decision is one transaction, so an entry is never in two states or in none. The Word document is not the memory any more: deleting a line from it does not bring the word back. Entry identity (`entry_key`) ignores case, spacing, punctuation, leading articles, object pronouns and plural/inflection of single words, and compares the **whole** unit: excluding *nail* does not affect *hit the nail on the head*, *brush off* does not affect *brush* or *brush up on*, and *give up* ≠ *give in*.
 
 **Vocabulary extraction — several items per subtitle (1.1).** In 1.0 the small model usually returned only the *first* interesting item of a line, and a malformed JSON answer lost the whole line. Nothing after the model was cutting the list; the cause was the model itself and the prompt ("be conservative", single-item examples). 1.1 changes four things, each measured:
 
@@ -320,7 +348,7 @@ The gain does not depend on the model: with the same benchmark, `gemma3:4b` goes
 
 **Interface — tkinter + pystray.** Both already part of the stack (no new heavy dependency such as Qt, ~100 MB). Tk runs on the main thread; the tray runs its own message loop; everything else talks to the window through a thread-safe queue.
 
-**Long sessions.** Capture/OCR never wait for the model (separate threads); the queue to the model is bounded (40 lines, oldest dropped); subtitle history is bounded (3 min, 500 entries); images are never kept or saved; stopping cancels the in-flight model request immediately.
+**Long sessions.** Capture/OCR never wait for the model (separate threads); subtitles waiting for the model are stored in `vocabulary.db` instead of an in-memory queue, so none is dropped and they survive a crash; subtitle history is bounded (3 min, 500 entries); images are never kept or saved.
 
 ### Architecture
 
@@ -333,36 +361,47 @@ WordLens/
 │   └── installer.iss             # Inno Setup
 ├── assets/                       # wordlens.ico / wordlens.png (generated by tools/make_icon.py)
 ├── wordlens/
-│   ├── app.py                    # Controller: sessions, capture/analyzer threads, queue, errors
-│   ├── state.py                  # State machine INACTIVE/CAPTURING/PROCESSING/STOPPED
+│   ├── app.py                    # Controller: sessions, capture/analyzer/finisher threads, SaveWorker (✓ → Word)
+│   ├── state.py                  # State machine INACTIVE/CAPTURING/PROCESSING/FINISHING/STOPPED
+│   ├── migration.py              # 1.x → 1.2 data migration (backups first, idempotent)
 │   ├── selftest.py               # --self-test for the packaged app
 │   ├── capture/                  # Screen bands, monitors (capture screen), preprocessing, change detection, subtitle filter
 │   ├── ocr/ocr_engine.py         # Windows.Media.Ocr
 │   ├── ai/
 │   │   ├── ollama_client.py      # Ollama REST API (cancellable, model pull)
 │   │   ├── ollama_setup.py       # Find / start Ollama, check the model
-│   │   ├── prompts.py            # System prompts and few-shot examples (EN→ES, ES→EN)
-│   │   └── vocabulary_analyzer.py
-│   ├── vocabulary/               # Candidates, normalisation, languages, validation, deduplication
+│   │   ├── prompts.py            # Exhaustive extraction prompts and examples (EN, ES)
+│   │   └── vocabulary_analyzer.py # Model + rules → consolidated candidates
+│   ├── translation/translator.py # Contextual translation engine (gemma3:4b via Ollama), replaceable
+│   ├── vocabulary/
+│   │   ├── lexicon.py            # Content words, grammar words/patterns, careful lemmas
+│   │   ├── extractor.py          # Parse model output, validate candidates
+│   │   ├── normalization.py      # entry_key: identity of an entry
+│   │   ├── store.py              # vocabulary.db (SQLite): pending, accepted, excluded, lines, cache
+│   │   └── candidates.py, languages.py, models.py
 │   ├── document/word_writer.py   # Safe .docx reading/writing
 │   ├── input/hotkeys.py          # RegisterHotKey
 │   ├── ui/
 │   │   ├── window.py             # Main window, first setup, settings
+│   │   ├── review.py             # Review window (virtual list) and Excluded vocabulary dialog
 │   │   ├── tray.py               # Tray icon and menu
 │   │   └── icon.py               # Icon drawing
 │   └── config/
 │       ├── paths.py              # App files vs user data (production / development)
 │       └── settings.py           # config.json
-├── tools/                        # try_text, subtitle_simulator, diagnose, benchmark_extraction, make_icon
-└── tests/                        # pytest; benchmark/extraction_cases.json = annotated benchmark
+├── tools/                        # try_text, subtitle_simulator, diagnose, benchmarks, make_icon
+├── docs/                         # evaluacion-1.2.md + benchmark results
+└── tests/                        # pytest; benchmark/*.jsonl = annotated benchmarks
 ```
 
 ### Known limitations
 
 - **DRM video** may be captured black (see *Troubleshooting*).
-- **Translation quality** depends on the model; it is right most of the time, but review the document now and then — you can edit or delete lines by hand.
-- **Conservative filter**: some genuine expressions made of very common words (e.g. *menos mal*) are skipped to avoid filling the document with basic vocabulary. The small model also misses some items (about 1 in 7 in the benchmark) and occasionally keeps only part of an idiom (*come back* instead of *come back to bite*).
+- **Translation quality**: about 9 in 10 translations are right in the benchmark; the rest are mostly irony and rare idioms. Double-click a translation in the review to correct it before accepting.
+- **Many suggestions at first**: with no difficulty filter, the first sessions propose basic words too (*go*, *know*, *movie*). Exclude them once with ✕ (or *Exclude all* after accepting what you want) and they never come back.
+- **Extraction misses**: about 4 % of units in the benchmark (e.g. *at the last minute* comes out as *last* + *minute*), plus occasional free combinations labelled as collocations (*grab an umbrella*).
+- **Names at the start of a sentence** are only recognised if the model reports them, if they appeared capitalised elsewhere in the session, or if they are common first names.
 - **Screen numbers** follow WordLens' own order (main screen first, then left to right), which may differ from the numbers in Windows Settings — use *Identify*.
-- **Small GPUs**: in very fast dialogue, some lines may be dropped if the queue fills up.
+- **Small GPUs**: extraction takes ~2 s per subtitle; in very fast dialogue the analysis falls behind and finishes after Stop (nothing is dropped), so the review may take a minute or two to open.
 - **Unusual subtitle colours**: use `"ocr_preprocess": "gray"`.
 - **Windows only** (native OCR, hotkeys and capture exclusion).
